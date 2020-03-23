@@ -9,6 +9,31 @@ import time
 import cv2
 import os
 
+class alvo():
+
+	def __init__(self):
+		self.X = None
+		self.Y = None
+		self.classe = None
+
+	def setAll(self,x,y,classe):
+		self.X = x
+		self.Y = y
+		self.classe = classe
+	
+	def se_alvo_na_area(self,x,y,w,h,classe):
+		if (x <= self.X <= x+w) and (y <= self.Y <= y+h):
+			if classe == self.classe:
+				return True
+		return False
+
+	def draw(self,frame):
+		cv2.circle(frame,(self.X,self.Y),5,(153,51,153)) # selected circle
+		return frame
+
+	def print(self):
+		print("x:{} | y:{} | classe: {}".format(self.X,self.Y,self.classe))
+
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", default = 'videos/DJI_0127.mp4',
@@ -22,6 +47,7 @@ ap.add_argument("-c", "--confidence", type=float, default=0.5,
 ap.add_argument("-t", "--threshold", type=float, default=0.3,
 	help="threshold when applyong non-maxima suppression")
 args = vars(ap.parse_args())
+
 
 # load the COCO class labels our YOLO model was trained on
 labelsPath = os.path.sep.join([args["yolo"], "coco.names"])
@@ -40,6 +66,7 @@ configPath = os.path.sep.join([args["yolo"], "yolov3.cfg"])
 # and determine only the *output* layer names that we need from YOLO
 print("[INFO] loading YOLO from disk...")
 net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
+
 ln = net.getLayerNames()
 ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
@@ -63,8 +90,9 @@ except:
 	print("[INFO] no approx. completion time can be provided")
 	total = -1
 
-selectedX = 969
-selectedY = 544
+alvo = alvo()
+alvo.setAll(969,544,LABELS[0])
+
 
 # loop over frames from the video file stream
 while True:
@@ -130,13 +158,12 @@ while True:
 
 	# apply non-maxima suppression to suppress weak, overlapping
 	# bounding boxes
-	idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"],
-		args["threshold"])
+	idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"],	args["threshold"])
 
 	# ensure at least one detection exists
 	if len(idxs) > 0:
 		
-		cv2.circle(frame,(selectedX,selectedY),5,(153,51,153)) # selected circle
+		alvo.draw(frame)
 
 		# loop over the indexes we are keeping
 		for i in idxs.flatten():
@@ -146,7 +173,7 @@ while True:
 			(centerX,centerY)= (boxes[i][4], boxes[i][5]) # center of the box
 			color = (0,0,255)
 
-			if (x <= selectedX <= x+w) and (y <= selectedY <= y+h):
+			if alvo.se_alvo_na_area(x,y,w,h,LABELS[classIDs[i]]):
 				color = [int(c) for c in COLORS[classIDs[i]]]
 
 			# draw a bounding box rectangle and label on the frame
