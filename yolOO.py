@@ -92,7 +92,7 @@ class yoloCNN():
 		# TODO: definir uma estrutura de dados para os objetos identificados, dados: Seu ID, posição, classe
 		# retornar array desta estrutura de dados.
 		# separar a função Draw do metodo de get_objects
-		
+
 		if len(idxs) > 0:
 			for i in idxs.flatten():
 
@@ -106,11 +106,12 @@ class yoloCNN():
 
 
 			# show the output image
-			cv2.imshow("Image", image)
-			cv2.waitKey(0)
+			# cv2.imshow("Image", image)
+			# cv2.waitKey(0)
+			return image
+		return False
 
 
-
-yoloCNN = yoloCNN(yoloPath = "yolo-coco", argConfidence = 0.5, threshold = 0.3)
-image = cv2.imread("videos/maePic.png")
-yoloCNN.get_objects(image)
+# yoloCNN = yoloCNN(yoloPath = "yolo-coco", argConfidence = 0.5, threshold = 0.3)
+# image = cv2.imread("videos/maePic.png")
+# yoloCNN.get_objects(image)
