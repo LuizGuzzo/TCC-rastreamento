@@ -55,7 +55,11 @@ while True:
 		break
 
 	start = time.time()		
-	frame = yoloCNN.get_objects(frame)
+	objects_detected = yoloCNN.get_objects(frame)
+	
+	for obj in objects_detected:
+		obj.draw(frame)
+
 	end = time.time()
 
 	# check if the video writer is None
@@ -69,8 +73,8 @@ while True:
 		if total > 0:
 			elap = (end - start)
 			print("[INFO] single frame took {:.4f} seconds".format(elap))
-			print("[INFO] estimated total time to finish: {:.4f}".format(
-				elap * total))
+			print("[INFO] estimated total time to finish: {:.4f}".format( elap * total))
+			print("[INFO] in minutes: {:.2f}".format((elap * total)/60))
 
 	# write the output frame to disk
 	writer.write(frame)

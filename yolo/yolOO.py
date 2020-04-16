@@ -7,6 +7,7 @@ import argparse
 import time
 import cv2
 import os
+import detection as det
 
 class yoloCNN():
 	
@@ -88,28 +89,24 @@ class yoloCNN():
 		# apply non-maxima suppression to suppress weak, overlapping bounding boxes
 		idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.argConfidence, self.threshold)
 
-
-		# TODO: definir uma estrutura de dados para os objetos identificados, dados: Seu ID, posição, classe
-		# retornar array desta estrutura de dados.
-		# separar a função Draw do metodo de get_objects
+		objects_detected = []
 
 		if len(idxs) > 0:
 			for i in idxs.flatten():
-
+				
 				(x, y) = (boxes[i][0], boxes[i][1])
 				(w, h) = (boxes[i][2], boxes[i][3])
-
+				classID = classIDs[i]
 				color = [int(c) for c in self.COLORS[classIDs[i]]]
-				cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-				text = "{}: {:.4f}".format(self.LABELS[classIDs[i]],	confidences[i])
-				cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+				category = self.LABELS[classIDs[i]]
+				confidence = confidences[i]
+				
+				obj_detected = det.detection(x,y,w,h,classID,color,category,confidence)
+				objects_detected.append(obj_detected)
 
+				
 
-			# show the output image
-			# cv2.imshow("Image", image)
-			# cv2.waitKey(0)
-			return image
-		return False
+		return objects_detected
 
 
 # yoloCNN = yoloCNN(yoloPath = "yolo-coco", argConfidence = 0.5, threshold = 0.3)
