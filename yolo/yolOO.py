@@ -7,7 +7,8 @@ import argparse
 import time
 import cv2
 import os
-import detection as det
+
+import yolo.detection as det
 
 class yoloCNN():
 	

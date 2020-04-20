@@ -9,18 +9,29 @@ import time
 import cv2
 import os
 
-import alvo as al
 import particle_filter.pf_tools as pf
-import detection
+import yolo.yolOO as yoo
 
 PARTICLES = 500
 MAXFRAMELOST = 10
+
+# TODO:
+# calibrar o FP para a situação da gravação
+# modificar a frequencia de atualização para ser em 0.5 sec em vez de frame por frame para o FP
+# colocar um input descente
+# 
+# 
+# 
+# future:
+# acelerar processamento
+# pegar o algoritmo da bola do air stick cam e tentar molda-lo aq    
+
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", default = 'inout/DJI_0127_croped.mp4',	help="path to input video")
 ap.add_argument("-o", "--output", default = 'inout/DJI_0127_croped.avi',	help="path to output video")
-ap.add_argument("-y", "--yolo", default = 'yolo-coco',	help="base path to YOLO directory")
+ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco',	help="base path to YOLO directory")
 ap.add_argument("-c", "--confidence", type=float, default=0.5,	help="minimum probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3,	help="threshold when applyong non-maxima suppression")
 args = vars(ap.parse_args())
@@ -45,7 +56,7 @@ except:
 	print("[INFO] no approx. completion time can be provided")
 	total = -1
 
-filter_is_on == False
+filter_is_on = False
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
 
@@ -67,10 +78,11 @@ while True:
 			obj.draw(framecpy)
 
 		cv2.imshow("objects_detected",framecpy)
-		cv2.waitkey(0)
+		cv2.waitKey(1)
+		cv2.destroyAllWindows()
 
 		# centroid = input("digite o centroide desejado")
-		centroid_predicted = (123,321)
+		centroid_predicted = (1018,553)
 
 		alvo = None
 		for obj in objects_detected:
@@ -94,7 +106,9 @@ while True:
 	for obj in objects_detected:
 
 		if obj.check_centroid(centroid_predicted) is True:
-			if obj.check_category(alvo) is True:
+			# print("centroid confirmed")
+			if obj.check_category(alvo.category) is True:
+				# print("category confirmed")
 				centroid_predicted = particleFilter.filter_steps(obj.get_centroid())
 				obj.set_color((0,255,0)) # green
 				alvo = obj
@@ -127,7 +141,8 @@ while True:
 			print("[INFO] estimated total time to finish: {:.4f} | in minutes> {:.2f}".format(elap * total, (elap * total)/60))
 
 	cv2.imshow("result",frame)
-	cv2.waitkey(0)
+	cv2.waitKey(1)
+	# cv2.destroyAllWindows()
 	# write the output frame to disk
 	writer.write(frame)
 

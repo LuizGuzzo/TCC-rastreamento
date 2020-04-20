@@ -23,7 +23,7 @@ class detection(): # obj_detected
 		cv2.putText(image, text, (self.x, self.y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
 		
 		# draw in the center of the box and label the coordinates below the box
-		cv2.circle(image,(centerX,centerY),2,color)
+		cv2.circle(image,(self.centerX,self.centerY),2,self.color)
 		centertext1 = "x: {}|y: {}".format(self.x,self.y)
 		centertext2 = "w: {}|h: {}".format(self.w,self.h)
 		centertext3 = "center: {}|centerY: {}".format(self.centerX,self.centerY)
@@ -35,17 +35,21 @@ class detection(): # obj_detected
 		return image
 
 	def check_centroid(self,centroid):
-		if (self.x <= centroid[0] <= self.x +self.w) and (self.y <= centroid[0] <= self.y +self.h):
+		# print("centroid X:{} Y:{}".format(centroid[0],centroid[1]))
+		# print("x: {} + w: {} = {}".format(self.x,self.w,self.x +self.w))
+		# print("y: {} + h: {} = {}".format(self.y,self.h,self.y +self.h))
+
+		if (self.x <= centroid[0] <= self.x +self.w) and (self.y <= centroid[1] <= self.y +self.h):
 			return True
 		return False
 
-	def check_category(self,alvo):
-		if self.category == alvo.category:
+	def check_category(self,category):
+		if self.category == category:
 			return True
 		return False
 
-	# def get_centroid(self):
-	# 	return (self.avgX , self.avgY)
+	def get_centroid(self):
+		return (self.centerX , self.centerY)
 
 	def set_color(self,color):
 		self.color = color

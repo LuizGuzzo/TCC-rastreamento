@@ -5,7 +5,7 @@ import time
 import random
 import numpy as np
 
-import particle as p
+import particle_filter.particle as p
 
 # maxParticles = 500
 
@@ -104,7 +104,7 @@ class ParticleFilter():
         sumY = 0
 
         for particle in self.vet_particles_predicted:
-            frame = cv2.circle(frame.copy(), (int(particle.X), int(particle.Y)),2, (242,147,244), -1) #desenha as particulas
+            frame = cv2.circle(frame, (int(particle.X), int(particle.Y)),2, (242,147,244), -1) #desenha as particulas
             sumX = sumX + particle.X
             sumY = sumY + particle.Y
 
