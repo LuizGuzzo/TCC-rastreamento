@@ -125,23 +125,36 @@ class ParticleFilter():
             particle.print()
         print("^ ---------------------- ^")
 
-    def filter_steps(self,center):
+    def __centroid_predicted(self):
+        sumX = 0
+        sumY = 0
+
+        for particle in self.vet_particles_predicted:
+            sumX = sumX + particle.X
+            sumY = sumY + particle.Y
+
+        avgX = int(sumX / self.maxParticles)
+        avgY = int(sumY / self.maxParticles)
+        return (avgX,avgY)
+
+    def filter_steps(self,center): # nome sugerido: predict_movement()
         self.vet_particles_predicted = self.__prediction()
 
         if center is not None:
-            print("| tracking |")
+            print("[INFO] - < tracking >")
             self.__correction(center)
             self.__normalize()
             self.__resort()
             self.__countToMaxFrameLost = 0
         else:
-            print("|> missing center <| cont: {} | max: {} to lose tracking.".format(self.__countToMaxFrameLost,self.maxFrameLost))
+            print("[INFO] - < missing center > | cont: {} | max: {} to lose tracking.".format(self.__countToMaxFrameLost,self.maxFrameLost))
             self.__vet_particles = self.vet_particles_predicted
             self.__countToMaxFrameLost = self.__countToMaxFrameLost + 1
 
         if self.__countToMaxFrameLost >= self.maxFrameLost:
             self.__vet_particles = None
-            print("|X LOST TRACKING X|")
+            print("[INFO] - < LOST TRACKING >")
             return False
 
-        return self.vet_particles_predicted
+        # return self.vet_particles_predicted
+        return self.__centroid_predicted()

@@ -55,8 +55,8 @@ while True:
 		break
 
 	start = time.time()		
+
 	objects_detected = yoloCNN.get_objects(frame)
-	
 	for obj in objects_detected:
 		obj.draw(frame)
 
