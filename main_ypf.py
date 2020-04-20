@@ -100,50 +100,19 @@ while True:
 				alvo = obj
 				find = True
 
+		obj.draw(frame)
+
 	if find is False:
 		centroid_predicted = None
 		centroid_predicted = particleFilter.filter_steps(centroid_predicted)
 
+	particleFilter.drawBox(frame)
 
-
-	# draw obj and pf
-
-	#PF
 	if centroid_predicted is False : # lose tracking (max exceeded)
 		filter_is_on = False
-		continue
 
 	end = time.time()
-
-	if alvo.se_alvo_na_area(x,y,w,h,LABELS[classIDs[i]]): # tirar da função
-		find = True
-
-		# pinta de cor Verde o objeto quando for detectado
-
-		# # draw a bounding box rectangle and label on the frame
-		# cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-		# text = "i:{} | {}: {:.4f}".format(i,LABELS[classIDs[i]], confidences[i])
-		# cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 		
-		# # draw in the center of the box and label the coordinates below the box
-		# cv2.circle(frame,(centerX,centerY),2,color)
-		# centertext1 = "x: {}|y: {}".format(x,y)
-		# centertext2 = "w: {}|h: {}".format(w,h)
-		# centertext3 = "center: {}|centerY: {}".format(centerX,centerY)
-
-		# cv2.putText(frame,centertext1,(x, y + h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-		# cv2.putText(frame,centertext2,(x, y + h+40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-		# cv2.putText(frame,centertext3,(x, y + h+60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-	
-	else:
-		# e se ele prever errado? preciso cv com max
-
-	# draw objects and pf
-				
-	
-			
-
-			
 
 	# check if the video writer is None
 	if writer is None:
@@ -157,8 +126,8 @@ while True:
 			print("[INFO] single frame took {:.4f} seconds".format(elap))
 			print("[INFO] estimated total time to finish: {:.4f} | in minutes> {:.2f}".format(elap * total, (elap * total)/60))
 
-	cv2.imshow("Image", frame)
-	cv2.waitKey(0)
+	cv2.imshow("result",frame)
+	cv2.waitkey(0)
 	# write the output frame to disk
 	writer.write(frame)
 

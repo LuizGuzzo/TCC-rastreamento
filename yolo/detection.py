@@ -3,23 +3,34 @@ import cv2
 # Estrutura de Dado
 class detection(): # obj_detected
 
-	def __init__(self,x,y,w,h,id,color,category,confidence):
+	def __init__(self,x,y,w,h,idx,color,category,confidence):
 		self.color = color
 		self.x = x
 		self.y = y
 		self.w = w
 		self.h = h
-		self.avgX = int(x+w/2)
-		self.avgY = int(y+h/2)
-		self.id = id #not in use
+		self.centerX = int(x+w/2)
+		self.centerY = int(y+h/2)
+		self.id = idx
 		self.category = category
 		self.confidence = confidence
 
 	def draw(self,image):
 
+		# draw a bounding box rectangle and label on the image
 		cv2.rectangle(image, (self.x, self.y), (self.x + self.w, self.y + self.h), self.color, 2)
-		text = "{}: {:.4f}".format(self.category, self.confidence)
+		text = "i:{} | {}: {:.4f}".format(self.id,self.category, self.confidence)
 		cv2.putText(image, text, (self.x, self.y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
+		
+		# draw in the center of the box and label the coordinates below the box
+		cv2.circle(image,(centerX,centerY),2,color)
+		centertext1 = "x: {}|y: {}".format(self.x,self.y)
+		centertext2 = "w: {}|h: {}".format(self.w,self.h)
+		centertext3 = "center: {}|centerY: {}".format(self.centerX,self.centerY)
+
+		cv2.putText(image,centertext1,(self.x, self.y + self.h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
+		cv2.putText(image,centertext2,(self.x, self.y + self.h+40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
+		cv2.putText(image,centertext3,(self.x, self.y + self.h+60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
 
 		return image
 
@@ -40,5 +51,5 @@ class detection(): # obj_detected
 		self.color = color
 
 	def set_prediction(self,centroid):
-		self.avgX = centroid[0]
-		self.avgY = centroid[1]
+		self.centerX = centroid[0]
+		self.centerY = centroid[1]
