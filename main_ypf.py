@@ -12,9 +12,6 @@ import os
 import particle_filter.pf_tools as pf
 import yolo.yolOO as yoo
 
-PARTICLES = 500
-MAXFRAMELOST = 10
-
 # TODO:
 # calibrar o FP para a situação da gravação
 # modificar a frequencia de atualização para ser em 0.5 sec em vez de frame por frame para o FP
@@ -29,11 +26,16 @@ MAXFRAMELOST = 10
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--input", default = 'inout/DJI_0127_croped.mp4',	help="path to input video")
+ap.add_argument("-i", "--input", default = 'inout/DJI_0127.mp4',	help="path to input video")
 ap.add_argument("-o", "--output", default = 'inout/DJI_0127_croped.avi',	help="path to output video")
 ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco',	help="base path to YOLO directory")
 ap.add_argument("-c", "--confidence", type=float, default=0.5,	help="minimum probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3,	help="threshold when applyong non-maxima suppression")
+ap.add_argument("-p","--particles", type=float, default=500, help="total of particles on the particle filter")
+ap.add_argument("-mf","--maxframelost",type=float, default=60, help="")
+ap.add_argument("-dt","--deltat",type=float, default=0.003, help="")
+ap.add_argument("-vm","--velmax",type=float, default=4000, help="")
+
 args = vars(ap.parse_args())
 
 
@@ -82,15 +84,16 @@ while True:
 		cv2.destroyAllWindows()
 
 		# centroid = input("digite o centroide desejado")
-		centroid_predicted = (1018,553)
+		centroid_predicted = (968,543)
 
 		alvo = None
 		for obj in objects_detected:
 			if obj.check_centroid(centroid_predicted) is True:
 				alvo = obj
 		
-		particleFilter = pf.ParticleFilter(PARTICLES,centroid_predicted,MAXFRAMELOST)
-		centroid_predicted = particleFilter.filter_steps(centroid_predicted) # preve antes de ver os obj
+		particleFilter = pf.ParticleFilter(args["particles"],centroid_predicted,
+							args["maxframelost"],args["deltat"],args["velmax"])
+		centroid_predicted = particleFilter.filter_steps(centroid_predicted)
 
 		filter_is_on = True
 
@@ -140,8 +143,8 @@ while True:
 			print("[INFO] single frame took {:.4f} seconds".format(elap))
 			print("[INFO] estimated total time to finish: {:.4f} | in minutes> {:.2f}".format(elap * total, (elap * total)/60))
 
-	cv2.imshow("result",frame)
-	cv2.waitKey(1)
+	# cv2.imshow("result",frame)
+	# cv2.waitKey(1)
 	# cv2.destroyAllWindows()
 	# write the output frame to disk
 	writer.write(frame)

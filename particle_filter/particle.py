@@ -5,12 +5,14 @@ import time
 import random
 import numpy as np
 
-DELTA_T = 1/30
-VELMAX = 3000
+# DELTA_T = 1/30
+# VELMAX = 3000
 
 class particle():
 
-    def __init__(self):
+    def __init__(self,DELTA_T = 1/30, VELMAX = 3000):
+        self.DELTA_T = DELTA_T
+        self.VELMAX = VELMAX
         self.X = None
         self.Y = None
         self.Vx = None
@@ -19,8 +21,8 @@ class particle():
         self.toNormalize = 0
 
         # ToDo: deixar tais parametros configuraveis pelo cliente
-        # self.deltaT = DELTA_T
-        # self.velMax = VELMAX
+        # self.deltaT = self.DELTA_T
+        # self.velMax = self.VELMAX
 
     def setAll(self,particle):
         self.X = int(particle.X)
@@ -29,14 +31,16 @@ class particle():
         self.Vy = particle.Vy
         self.weight = particle.weight
         self.toNormalize = particle.toNormalize
+        self.DELTA_T = particle.DELTA_T
+        self.VELMAX = particle.VELMAX
 
     def start(self,center):
         # self.X = random.gauss(center[0],50)
         # self.Y = random.gauss(center[1],50)
         self.X = int(center[0])
         self.Y = int(center[1])
-        self.Vx = random.uniform(-VELMAX, VELMAX)  # velocidade 1549 pixels/sec
-        self.Vy = random.uniform(-VELMAX, VELMAX)  # velocidade 1549 pixels/sec
+        self.Vx = random.uniform(-self.VELMAX, self.VELMAX)  # velocidade 1549 pixels/sec
+        self.Vy = random.uniform(-self.VELMAX, self.VELMAX)  # velocidade 1549 pixels/sec
         self.weight = 0
         self.toNormalize = 0
 
@@ -45,34 +49,34 @@ class particle():
 
         # print(" ------------- PRED INI ------------- ")
 
-        a = pow(VELMAX * 0.01, 2)
+        a = pow(self.VELMAX * 0.01, 2)
         b = random.gauss(0, a)
         self.Vx = self.Vx + b
-        # print("pow(VELMAX * 0.1, 2): {: >10.3f}| random.gauss(0, a): {: >10.3f}| Vx: {: >10.3f}|".format(a, b, self.Vx))
+        # print("pow(self.VELMAX * 0.1, 2): {: >10.3f}| random.gauss(0, a): {: >10.3f}| Vx: {: >10.3f}|".format(a, b, self.Vx))
 
         b = random.gauss(0, a)
         self.Vy = self.Vy + b
-        # print("pow(VELMAX * 0.1, 2): {: >10.3f}| random.gauss(0, a): {: >10.3f}| Vy: {: >10.3f}|".format(a, b, self.Vy))
+        # print("pow(self.VELMAX * 0.1, 2): {: >10.3f}| random.gauss(0, a): {: >10.3f}| Vy: {: >10.3f}|".format(a, b, self.Vy))
 
-        if self.Vx > VELMAX :
-            self.Vx = VELMAX
+        if self.Vx > self.VELMAX :
+            self.Vx = self.VELMAX
 
-        if self.Vy > VELMAX :
-            self.Vy = VELMAX
+        if self.Vy > self.VELMAX :
+            self.Vy = self.VELMAX
 
-        if self.Vx < -VELMAX :
-            self.Vx = -VELMAX
+        if self.Vx < -self.VELMAX :
+            self.Vx = -self.VELMAX
 
-        if self.Vy < -VELMAX :
-            self.Vy = -VELMAX
+        if self.Vy < -self.VELMAX :
+            self.Vy = -self.VELMAX
 
-        a = DELTA_T * self.Vx
+        a = self.DELTA_T * self.Vx
         self.X = int(self.X + a)
-        # print("DELTA_T * self.Vx: {}|self.X + a: {}".format(a, self.X))
+        # print("self.DELTA_T * self.Vx: {}|self.X + a: {}".format(a, self.X))
 
-        a = DELTA_T * self.Vy
+        a = self.DELTA_T * self.Vy
         self.Y = int(self.Y + a)
-        # print("DELTA_T * self.Vy: {}|self.Y + a: {}".format(a, self.Y))
+        # print("self.DELTA_T * self.Vy: {}|self.Y + a: {}".format(a, self.Y))
         # print(" ------------- PRED END ------------- ")
 
         return self

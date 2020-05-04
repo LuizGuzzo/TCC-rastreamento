@@ -14,9 +14,12 @@ import image_process as ip
 # pip install --upgrade imutils
 # pip install opencv-python
 
-
-# cap = cv2.VideoCapture('basket.mp4') # poem o nome do arquivo do video do professor aqui
-
+ap = argparse.ArgumentParser()
+ap.add_argument("-d", "--deltat",type=float)
+ap.add_argument("-v", "--velmax",type=float)
+ap.add_argument("-ld", "--timelocked",type=float,default=15)
+ap.add_argument("-lt", "--timelost",type=float,default=5)
+args = vars(ap.parse_args())
 
 # initialize the video stream, pointer to output video file, and
 # frame dimensions
@@ -38,8 +41,8 @@ except:
 	total = -1
 
 #define constant
-TIMELOCKED = 15
-TIMELOST = 5
+TIMELOCKED = args["timelocked"]
+TIMELOST = args["timelost"]
 
 contPerdeSinal = TIMELOCKED
 contTempoPerdido = TIMELOST
@@ -88,7 +91,7 @@ while True:
 
 	if filter_is_on == False:
 		if center is None: continue
-		particleFilter = pf.ParticleFilter(500,center,10)
+		particleFilter = pf.ParticleFilter(500,center,10,args["deltat"],args["velmax"])
 		filter_is_on = True
 
 	if particleFilter.filter_steps(center) is False :
@@ -101,7 +104,7 @@ while True:
 
 
 	# cv2.imshow("Image", frame)
-	# cv2.waitKey(0)
+	# cv2.waitKey(50)
 
 
 	end = time.time()

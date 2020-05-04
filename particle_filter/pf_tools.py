@@ -5,24 +5,25 @@ import time
 import random
 import numpy as np
 
-import particle_filter.particle as p
+# import particle as p
+import particle_filter.particle as p # para rodar pela main ypf
 
-# maxParticles = 500
+# MAXPARTICLES = 500
 
 
 class ParticleFilter():
 
-    def __init__(self,maxParticles,center,maxFrameLost):
-        self.maxParticles = maxParticles
-        self.__vet_particles = self.__start(center)
+    def __init__(self,MAXPARTICLES,center,MAXFRAMELOST, DELTA_T = None ,VELMAX = None):
+        self.MAXPARTICLES = MAXPARTICLES
+        self.MAXFRAMELOST = MAXFRAMELOST
+        self.__vet_particles = self.__start(center,DELTA_T,VELMAX)
         self.vet_particles_predicted = None
-        self.maxFrameLost = maxFrameLost
         self.__countToMaxFrameLost = 0
 
-    def __start(self,center):
+    def __start(self,center,DELTA_T,VELMAX):
         vet_particles = []
-        for _ in range(self.maxParticles):
-            particle = p.particle()
+        for _ in range(self.MAXPARTICLES):
+            particle = p.particle(DELTA_T,VELMAX)
             particle.start(center)
             vet_particles.append(particle)
 
@@ -48,26 +49,27 @@ class ParticleFilter():
 
 
     def __resort(self):
-        sorted_vet_particulas = [p.particle() for _ in range(self.maxParticles)]
-        vetSort = []
+        # sorted_vet_particulas = self.__vet_particles.copy() 
+        sorted_vet_particulas = [p.particle() for _ in range(self.MAXPARTICLES)]
+        vet_weight = []
         
         sumWeight = 0
         for particle in self.__vet_particles:
             sumWeight = sumWeight + particle.weight
-            vetSort.append(sumWeight)
+            vet_weight.append(sumWeight)
 
         n = random.uniform(0,1)
         metodo = False # ir true metodo correto, else metodo q ele deixou
 
         if metodo:
             print('n vai roda')
-            # # verificar aonde esse valor de N se encontra no intervalo de tempo do vetSort
+            # # verificar aonde esse valor de N se encontra no intervalo de tempo do vet_weight
             # # pegar esta posição e usar para buscar a particula na posição no vet_particles
             # # atribuir essa particula "grande" selecionada ao novo vet_particula ate fechar 1 do total de peso analisado
             
             # tot = 0
             # for _ in range(len(vet_particles)):
-            #     for i,sz in enumerate(vetSort,0):
+            #     for i,sz in enumerate(vet_weight,0):
             #         if n <= sz:
             #             sorted_vet_particulas.append(vet_particles[i]) # pega a particula 'gorda'
             #             frag = 1 / len(vet_particles)
@@ -81,12 +83,12 @@ class ParticleFilter():
             
             # print("tot",tot)
         else:
-            for z in range(len(self.__vet_particles)): #for z in range(self.maxParticles): <<< testa isso dps
-                for i,sz in enumerate(vetSort,0):
+            for z in range(self.MAXPARTICLES):
+                for i,sz in enumerate(vet_weight,0):
                     if n <= sz:
                         # print("casa: {}|sz: {}| n: {}|".format(i, sz, n))
-                        particle = self.__vet_particles[i]
-                        sorted_vet_particulas[z].setAll(particle) # pega a particula 'gorda'
+                        sorted_vet_particulas[z].setAll(self.__vet_particles[i])
+
                         # print("peso P: ",vet_particles[i].W)
                         n = random.uniform(0,1)
                         break
@@ -108,8 +110,8 @@ class ParticleFilter():
             sumX = sumX + particle.X
             sumY = sumY + particle.Y
 
-        avgX = int(sumX / self.maxParticles)
-        avgY = int(sumY / self.maxParticles)
+        avgX = int(sumX / self.MAXPARTICLES)
+        avgY = int(sumY / self.MAXPARTICLES)
 
         cv2.circle(frame,(int(avgX),int(avgY)),100,roxo,2)
         cv2.circle(frame,(int(avgX),int(avgY)),2,roxo,-1)
@@ -133,8 +135,8 @@ class ParticleFilter():
             sumX = sumX + particle.X
             sumY = sumY + particle.Y
 
-        avgX = int(sumX / self.maxParticles)
-        avgY = int(sumY / self.maxParticles)
+        avgX = int(sumX / self.MAXPARTICLES)
+        avgY = int(sumY / self.MAXPARTICLES)
         return (avgX,avgY)
 
     def filter_steps(self,center): # nome sugerido: predict_movement()
@@ -147,11 +149,11 @@ class ParticleFilter():
             self.__resort()
             self.__countToMaxFrameLost = 0
         else:
-            print("[INFO] - < missing center > | cont: {} | max: {} to lose tracking.".format(self.__countToMaxFrameLost,self.maxFrameLost))
+            print("[INFO] - < missing center > | cont: {} | max: {} to lose tracking.".format(self.__countToMaxFrameLost,self.MAXFRAMELOST))
             self.__vet_particles = self.vet_particles_predicted
             self.__countToMaxFrameLost = self.__countToMaxFrameLost + 1
 
-        if self.__countToMaxFrameLost >= self.maxFrameLost:
+        if self.__countToMaxFrameLost >= self.MAXFRAMELOST:
             self.__vet_particles = None
             print("[INFO] - < LOST TRACKING >")
             return False
