@@ -141,7 +141,19 @@ while True:
 
 	######################################################
 
-	
+
+	# recebe a imagem
+	# recebe objetos identificados
+	# printa eles na tela
+	# seleciona um
+	# inicializa o vet_P
+	# proximo frame
+
+	# recebe a imagem
+	# recebe objetos identificados
+	# preve a movimentação do alvo selecionado anteriormente
+
+
 
 	#inicializa o vet_P
 
@@ -172,9 +184,8 @@ while True:
 
 			if alvo.se_alvo_na_area(x,y,w,h,LABELS[classIDs[i]]):
 				color = [int(c) for c in COLORS[classIDs[i]]]
-				alvo.draw_particles(frame)
 				vet_P , alvo.vet_PP = pf.filter_steps(vet_P,(x,y))
-
+				
 				find = True
 			
 
@@ -215,7 +226,8 @@ while True:
 			tracked = True
 		else:
 			vet_P_None = pf.filter_steps(vet_P,None) # e se ele prever errado? preciso cv com max
-				
+
+	#end if not exist detection			
 			
 	alvo.draw_particles(frame)
 				
