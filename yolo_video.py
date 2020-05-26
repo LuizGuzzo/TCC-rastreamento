@@ -9,43 +9,16 @@ import time
 import cv2
 import os
 
-class alvo():
-
-	def __init__(self):
-		self.X = None
-		self.Y = None
-		self.classe = None
-
-	def setAll(self,x,y,classe):
-		self.X = x
-		self.Y = y
-		self.classe = classe
-	
-	def se_alvo_na_area(self,x,y,w,h,classe):
-		if (x <= self.X <= x+w) and (y <= self.Y <= y+h):
-			if classe == self.classe:
-				return True
-		return False
-
-	def draw(self,frame):
-		cv2.circle(frame,(self.X,self.Y),5,(153,51,153)) # selected circle
-		return frame
-
-	def print(self):
-		print("x:{} | y:{} | classe: {}".format(self.X,self.Y,self.classe))
+import alvo as al
+import particle_filter.pf_tools as pf
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--input", default = 'videos/DJI_0127.mp4',
-	help="path to input video")
-ap.add_argument("-o", "--output", default = 'output/DJI_0127.avi',
-	help="path to output video")
-ap.add_argument("-y", "--yolo", default = 'yolo-coco',
-	help="base path to YOLO directory")
-ap.add_argument("-c", "--confidence", type=float, default=0.5,
-	help="minimum probability to filter weak detections")
-ap.add_argument("-t", "--threshold", type=float, default=0.3,
-	help="threshold when applyong non-maxima suppression")
+ap.add_argument("-i", "--input", default = 'videos/DJI_0127.mp4',	help="path to input video")
+ap.add_argument("-o", "--output", default = 'output/DJI_0127.avi',	help="path to output video")
+ap.add_argument("-y", "--yolo", default = 'yolo-coco',	help="base path to YOLO directory")
+ap.add_argument("-c", "--confidence", type=float, default=0.5,	help="minimum probability to filter weak detections")
+ap.add_argument("-t", "--threshold", type=float, default=0.3,	help="threshold when applyong non-maxima suppression")
 args = vars(ap.parse_args())
 
 
@@ -55,8 +28,7 @@ LABELS = open(labelsPath).read().strip().split("\n")
 
 # initialize a list of colors to represent each possible class label
 np.random.seed(42)
-COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),
-	dtype="uint8")
+COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),	dtype="uint8")
 
 # derive the paths to the YOLO weights and model configuration
 weightsPath = os.path.sep.join([args["yolo"], "yolov3.weights"])
@@ -90,9 +62,11 @@ except:
 	print("[INFO] no approx. completion time can be provided")
 	total = -1
 
-alvo = alvo()
-alvo.setAll(969,544,LABELS[0])
-
+tracked = False
+lost = 0
+alvo = al.alvo()
+find = False
+vet_P_None = None
 
 # loop over frames from the video file stream
 while True:
@@ -111,12 +85,16 @@ while True:
 	# construct a blob from the input frame and then perform a forward
 	# pass of the YOLO object detector, giving us our bounding boxes
 	# and associated probabilities
-	blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416),
-		swapRB=True, crop=False)
+	blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416), swapRB=True, crop=False)
 	net.setInput(blob)
+
 	start = time.time()
+
 	layerOutputs = net.forward(ln)
-	end = time.time()
+	
+	
+
+	######################################################################
 
 	# initialize our lists of detected bounding boxes, confidences,
 	# and class IDs, respectively
@@ -160,10 +138,29 @@ while True:
 	# bounding boxes
 	idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"],	args["threshold"])
 
+
+	######################################################
+
+	
+
+	#inicializa o vet_P
+
+	# preve a movimentação do alvo - mantem o vet P anterior
+	# recebe os objetos
+	# compara se essa posição tem um objeto da mesma classe do alvo
+		# se sim, passa o vet P anterior para atualizar o vet P conforme o novo centroide
+		# se não mantem a predição como novo vet P
+
+	# atualiza as coordenadas do alvo
+	# desenha vet P e a sua media central
+	
+	
+	
+
+
 	# ensure at least one detection exists
 	if len(idxs) > 0:
 		
-		alvo.draw(frame)
 
 		# loop over the indexes we are keeping
 		for i in idxs.flatten():
@@ -175,6 +172,12 @@ while True:
 
 			if alvo.se_alvo_na_area(x,y,w,h,LABELS[classIDs[i]]):
 				color = [int(c) for c in COLORS[classIDs[i]]]
+				alvo.draw_particles(frame)
+				vet_P , alvo.vet_PP = pf.filter_steps(vet_P,(x,y))
+
+				find = True
+			
+
 
 			# draw a bounding box rectangle and label on the frame
 			cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
@@ -190,12 +193,33 @@ while True:
 			cv2.putText(frame,centertext1,(x, y + h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 			cv2.putText(frame,centertext2,(x, y + h+40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 			cv2.putText(frame,centertext3,(x, y + h+60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-			
-				
-			
-			
-				
+		
+		if find is False:
+			lost = lost +1
+			vet_P = vet_P_None
 
+		if lost > 4:
+			lost = 0
+			tracked = False
+
+		find = False
+
+		if tracked is False:
+			#re-escolha o centro
+			center = (969,544) # poem um input
+			vet_P = pf.start(center)
+			vet_P, vet_PP = pf.filter_steps(vet_P,center) # HERE
+
+			alvo = al.alvo()
+			alvo.setAll(LABELS[0],vet_PP)
+			tracked = True
+		else:
+			vet_P_None = pf.filter_steps(vet_P,None) # e se ele prever errado? preciso cv com max
+				
+			
+	alvo.draw_particles(frame)
+				
+	end = time.time()
 			
 
 			
@@ -214,8 +238,8 @@ while True:
 			print("[INFO] estimated total time to finish: {:.4f}".format(
 				elap * total))
 
-	# cv2.imshow("Image", frame)
-	# cv2.waitKey(0)
+	cv2.imshow("Image", frame)
+	cv2.waitKey(0)
 	# write the output frame to disk
 	writer.write(frame)
 

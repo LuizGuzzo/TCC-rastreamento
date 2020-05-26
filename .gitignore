@@ -4,4 +4,6 @@ yolo/yolo-object-detection/output
 yolo/yolo-object-detection/videos
 yolo/yolo-object-detection/images
 yolo/yolo-object-detection/yolo-coco
+*.avi
 
+yolo-coco/
