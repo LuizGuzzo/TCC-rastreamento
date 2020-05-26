@@ -1,11 +1,10 @@
 caio-particle-filter
 yolo/object-detection-opencv-master
-yolo/yolo-object-detection/output
-yolo/yolo-object-detection/videos
-yolo/yolo-object-detection/images
-yolo/yolo-object-detection/yolo-coco
 *.avi
 *.mp4
 drone
+*.weights
+*.cfg
+*.names
 
 yolo-coco/
