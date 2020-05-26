@@ -111,7 +111,7 @@ while True:
 				# print("category confirmed")
 				centroid_predicted = particleFilter.filter_steps(obj.get_centroid())
 				obj.set_color((0,255,0)) # green
-				alvo = obj
+				alvo = obj # alvo poderia ser apenas a classe do objeto (e oque garante hipoteticamente que seja o mesmo objeto)
 				find = True
 
 		obj.draw(frame)

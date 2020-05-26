@@ -6,5 +6,6 @@ yolo/yolo-object-detection/images
 yolo/yolo-object-detection/yolo-coco
 *.avi
 *.mp4
+drone
 
 yolo-coco/
