@@ -2,6 +2,7 @@ caio-particle-filter
 yolo/object-detection-opencv-master
 *.avi
 *.mp4
+yolo/yolo-coco/
 drone
 *.weights
 *.cfg
