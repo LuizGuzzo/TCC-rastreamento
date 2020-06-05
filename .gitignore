@@ -2,5 +2,12 @@ caio-particle-filter
 yolo/object-detection-opencv-master
 *.avi
 *.mp4
-drone/
 yolo-coco/
+
+drone/openpose-master/
+
+drone/TelloPy-develop-0.7.0/
+
+drone/telloCV-master/
+
+drone/tello-openpose-master/

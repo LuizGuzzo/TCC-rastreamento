@@ -32,7 +32,7 @@ ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco',	help="base path to Y
 ap.add_argument("-c", "--confidence", type=float, default=0.5,	help="minimum probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3,	help="threshold when applyong non-maxima suppression")
 ap.add_argument("-p","--particles", type=float, default=500, help="total of particles on the particle filter")
-ap.add_argument("-mf","--maxframelost",type=float, default=60, help="")
+ap.add_argument("-mf","--maxframelost",type=float, default=60, help="the max of frames can be lost")
 ap.add_argument("-dt","--deltat",type=float, default=0.003, help="")
 ap.add_argument("-vm","--velmax",type=float, default=4000, help="")
 
