@@ -24,9 +24,11 @@ cv2.createTrackbar("VALUE Max","HSV",255,255,empty)
  
 cv2.namedWindow("Parameters")
 cv2.resizeWindow("Parameters",640,240)
-cv2.createTrackbar("Threshold1","Parameters",255,255,empty)
-cv2.createTrackbar("Threshold2","Parameters",248,255,empty)
-cv2.createTrackbar("Area","Parameters",248,30000,empty)
+cv2.createTrackbar("Threshold1","Parameters",0,255,empty)
+cv2.createTrackbar("Threshold2","Parameters",94,255,empty)
+cv2.createTrackbar("MinArea","Parameters",848,30000,empty)
+cv2.createTrackbar("Area Min","Parameters",2360,30000, empty)
+cv2.createTrackbar("Area Max","Parameters",5093,30000, empty)
  
  
 def stackImages(scale,imgArray):
@@ -65,8 +67,9 @@ def getContours(img,imgContour):
 	contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 	for cnt in contours:
 		area = cv2.contourArea(cnt)
-		areaMin = cv2.getTrackbarPos("Area", "Parameters")
-		if area > areaMin:
+		areaMinDetect = cv2.getTrackbarPos("MinArea", "Parameters")
+
+		if area > areaMinDetect:
 			cv2.drawContours(imgContour, cnt, -1, (255, 0, 255), 7)
 			peri = cv2.arcLength(cnt, True)
 			approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
@@ -83,38 +86,48 @@ def getContours(img,imgContour):
  
 			cx = int(x + (w / 2))
 			cy = int(y + (h / 2))
-			
 			widthPart = int((int(frameWidth/2)-deadZone) /2)
+			
+			areaMin = cv2.getTrackbarPos("Area Min","Parameters")
+			areaMax = cv2.getTrackbarPos("Area Max","Parameters")
 
-			if (cx < int(frameWidth/2)-deadZone):
+			# vermelho emite () Azul Recebe ()
+			if(area < areaMin):
+				cv2.putText(imgContour, " GO FOWARD " , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
+				cv2.rectangle(imgContour, (x , y ), (x + w , y + h ), (255, 0, 0), 5)
+			elif(area > areaMax):
+				cv2.putText(imgContour, " GO BACKWARD " , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
+				cv2.rectangle(imgContour, (x , y ), (x + w , y + h ), (0, 0, 255), 5)
+
+			elif (cx < int(frameWidth/2)-deadZone):
 				if (cx < widthPart):
 					cv2.putText(imgContour, " GO LEFT " , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
 					cv2.rectangle(imgContour,(0,int(frameHeight/2-deadZone)),
 						(widthPart, int(frameHeight/2)+deadZone),
-						(0,0,255),cv2.FILLED)
+						(0,153,255),cv2.FILLED)
 				else:
 					cv2.putText(imgContour, " GO LEFT ROTATE " , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
 					cv2.rectangle(imgContour,(widthPart,int(frameHeight/2-deadZone)),
 						(int(frameWidth/2)-deadZone, int(frameHeight/2)+deadZone),
-						(0,0,255),cv2.FILLED)
+						(0,153,255),cv2.FILLED)
 			elif (cx > int(frameWidth/2)+deadZone):
 				if (cx < frameWidth-widthPart):
 					cv2.putText(imgContour, " GO RIGHT ROTATE ", (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
 					cv2.rectangle(imgContour,(int(frameWidth/2)+deadZone, int(frameHeight/2-deadZone)),
 						(frameWidth-widthPart,int(frameHeight/2)+deadZone),
-						(0,0,255),cv2.FILLED)
+						(0,153,255),cv2.FILLED)
 				else:
 					cv2.putText(imgContour, " GO RIGHT ", (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
 					cv2.rectangle(imgContour,(frameWidth-widthPart, int(frameHeight/2-deadZone)),
 						(frameWidth,int(frameHeight/2)+deadZone),
-						(0,0,255),cv2.FILLED)
+						(0,153,255),cv2.FILLED)
 					
 			elif (cy < int(frameHeight / 2) - deadZone):
 				cv2.putText(imgContour, " GO UP ", (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
-				cv2.rectangle(imgContour,(int(frameWidth/2-deadZone),0),(int(frameWidth/2+deadZone),int(frameHeight/2)-deadZone),(0,0,255),cv2.FILLED)
+				cv2.rectangle(imgContour,(int(frameWidth/2-deadZone),0),(int(frameWidth/2+deadZone),int(frameHeight/2)-deadZone),(0,153,255),cv2.FILLED)
 			elif (cy > int(frameHeight / 2) + deadZone):
 				cv2.putText(imgContour, " GO DOWN ", (20, 50), cv2.FONT_HERSHEY_COMPLEX, 1,(0, 0, 255), 3)
-				cv2.rectangle(imgContour,(int(frameWidth/2-deadZone),int(frameHeight/2)+deadZone),(int(frameWidth/2+deadZone),frameHeight),(0,0,255),cv2.FILLED)
+				cv2.rectangle(imgContour,(int(frameWidth/2-deadZone),int(frameHeight/2)+deadZone),(int(frameWidth/2+deadZone),frameHeight),(0,153,255),cv2.FILLED)
  
  
 			cv2.line(imgContour, (int(frameWidth/2),int(frameHeight/2)), (cx,cy),
@@ -123,7 +136,6 @@ def getContours(img,imgContour):
 def display(img):
 	cv2.line(img,(int(frameWidth/2)-deadZone,0),(int(frameWidth/2)-deadZone,frameHeight),(255,255,0),3)
 	cv2.line(img,(int(frameWidth/2)+deadZone,0),(int(frameWidth/2)+deadZone,frameHeight),(255,255,0),3)
- 
 	cv2.circle(img,(int(frameWidth/2),int(frameHeight/2)),5,(0,0,255),5)
 	cv2.line(img, (0,int(frameHeight / 2) - deadZone), (frameWidth,int(frameHeight / 2) - deadZone), (255, 255, 0), 3)
 	cv2.line(img, (0, int(frameHeight / 2) + deadZone), (frameWidth, int(frameHeight / 2) + deadZone), (255, 255, 0), 3)
@@ -161,6 +173,7 @@ while True:
 	stack = stackImages(0.7,([img,result],[imgDil,imgContour]))
  
 	cv2.imshow('Horizontal Stacking', stack)
+	# cv2.imshow("result",imgContour)
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
  
