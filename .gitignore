@@ -11,3 +11,7 @@ drone/TelloPy-develop-0.7.0/
 drone/telloCV-master/
 
 drone/tello-openpose-master/
+
+*.cfg
+
+yolo/yolo-coco-tiny/yolov3.weights

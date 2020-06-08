@@ -143,8 +143,8 @@ while True:
 			print("[INFO] single frame took {:.4f} seconds".format(elap))
 			print("[INFO] estimated total time to finish: {:.4f} | in minutes> {:.2f}".format(elap * total, (elap * total)/60))
 
-	# cv2.imshow("result",frame)
-	# cv2.waitKey(1)
+	cv2.imshow("result",frame)
+	cv2.waitKey(0)
 	# cv2.destroyAllWindows()
 	# write the output frame to disk
 	writer.write(frame)
