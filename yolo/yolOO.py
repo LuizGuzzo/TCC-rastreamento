@@ -37,6 +37,7 @@ class yoloCNN():
 		self.ln = [self.ln[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
 
 		(self.W, self.H) = (None, None)
+		print("[INFO] COMPLETED")
 
 
 	def get_objects(self,image):
@@ -105,7 +106,7 @@ class yoloCNN():
 				obj_detected = det.detection(x,y,w,h,classID,color,category,confidence)
 				objects_detected.append(obj_detected)
 
-				
+		
 
 		return objects_detected
 
