@@ -41,13 +41,14 @@ def getMousePosition(event,x,y,flags,param):
         mouse = (x,y)
         filterStarted = True
 	
-cv2.namedWindow('chose the object')
-cv2.setMouseCallback('chose the object',getMousePosition)
+
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
 
 while True:
 	(grabbed, frame) = vs.read()
+	framecpy = frame.copy()
+
 	start = time.time()
 
 	if not grabbed:
@@ -55,15 +56,16 @@ while True:
 
 	if filterStarted is False:
 
-		framecpy = frame.copy()
-		objects_detected = yoloCNN.get_objects(framecpy)
+		
+		objects_detected = yoloCNN.get_objects(frame)
 		for obj in objects_detected:
 			obj.draw(framecpy)
 
+		cv2.namedWindow('output')
+		cv2.setMouseCallback('output',getMousePosition)
 		cv2.putText(framecpy, "CHOSE THE OBJECT", (10, 400), cv2.FONT_HERSHEY_PLAIN, 4, (255, 255, 255), 3)
-		cv2.imshow('chose the object',framecpy)
+		cv2.imshow('output',framecpy)
 		cv2.waitKey(1)
-		# cv2.destroyAllWindows()
 
 		if mouse is not None:
 			centroid_predicted = mouse
@@ -73,19 +75,23 @@ while True:
 				if obj.check_centroid(centroid_predicted) is True:
 					alvo = obj
 			
+			if alvo is None:
+				print("[ERROR] - chose again the object")
+				mouse = None
+				filterStarted = False
+				continue
+
 			particleFilter = pf.ParticleFilter(args["particles"],centroid_predicted,
 								args["maxframelost"],args["deltat"],args["velmax"])
 			centroid_predicted = particleFilter.filter_steps(centroid_predicted)
 			mouse = None
 
-	else:
+			cv2.destroyAllWindows()
 
-		# start = time.time()
+	else:
 
 		#CNN
 		objects_detected = yoloCNN.get_objects(frame)
-
-		
 
 		find = False
 		for obj in objects_detected:
@@ -99,22 +105,24 @@ while True:
 					alvo = obj # alvo poderia ser apenas a classe do objeto (e oque garante hipoteticamente que seja o mesmo objeto)
 					find = True
 
-			obj.draw(frame)
+			obj.draw(framecpy)
 
-		if find is False:
+		if find is False: # lose tracking (non max exceeded)
 			centroid_predicted = None
 			centroid_predicted = particleFilter.filter_steps(centroid_predicted)
 
-		particleFilter.drawBox(frame)
+		particleFilter.drawBox(framecpy)
 
 		if centroid_predicted is False : # lose tracking (max exceeded)
+			print("[ERROR] - chose again the object")
+			mouse = None
 			filterStarted = False
+			alvo = None
 
-		
 	if writer is None:
 		
 		fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-		writer = cv2.VideoWriter(args["output"], fourcc, 30, (frame.shape[1], frame.shape[0]), True)
+		writer = cv2.VideoWriter(args["output"], fourcc, 5, (frame.shape[1], frame.shape[0]), True)
 
 		# 	# some information on processing single frame
 		# 	if total > 0:
@@ -125,16 +133,15 @@ while True:
 	end = time.time()
 	elap = (end - start)
 	fps = 1/elap
-	cv2.putText(frame, "FPS: {}".format(str(round(fps, 2))), (10, 50), cv2.FONT_HERSHEY_PLAIN, 4, (255, 255, 255), 3)
+	cv2.putText(framecpy, "FPS: {}".format(str(round(fps, 2))), (10, 50), cv2.FONT_HERSHEY_PLAIN, 4, (255, 255, 255), 3)
 	print("FPS: {}".format(str(round(fps, 2))))
-	cv2.imshow("result",frame)
-	writer.write(frame)
+	cv2.imshow("output",framecpy)
+	if cv2.waitKey(1) & 0xFF == ord('q'):
+		break
+	
+	writer.write(framecpy)
 
-		# cv2.imshow("result",frame)
-		# cv2.waitKey(0)
-		# cv2.destroyAllWindows()
-		# write the output frame to disk
-		# writer.write(frame)
+	
 
 # release the file pointers
 print("[INFO] cleaning up...")
