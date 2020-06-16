@@ -25,9 +25,9 @@ class detection(): # obj_detected
 		
 		# draw in the center of the box and label the coordinates below the box
 		cv2.circle(image,(self.centerX,self.centerY),2,self.color)
-		centertext1 = "x: {}|y: {}".format(self.x,self.y)
+		centertext1 = "cX: {}|cY: {}".format(self.centerX,self.centerY)
 		centertext2 = "w: {}|h: {}".format(self.w,self.h)
-		centertext3 = "center: {}|centerY: {}".format(self.centerX,self.centerY)
+		centertext3 = "area: {}".format(self.area)
 
 		cv2.putText(image,centertext1,(self.x, self.y + self.h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
 		cv2.putText(image,centertext2,(self.x, self.y + self.h+40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
