@@ -39,7 +39,8 @@ class detection(): # obj_detected
 		# print("centroid X:{} Y:{}".format(centroid[0],centroid[1]))
 		# print("x: {} + w: {} = {}".format(self.x,self.w,self.x +self.w))
 		# print("y: {} + h: {} = {}".format(self.y,self.h,self.y +self.h))
-
+		if centroid is False or centroid is None :
+			return False
 		if (self.x <= centroid[0] <= self.x +self.w) and (self.y <= centroid[1] <= self.y +self.h):
 			return True
 		return False
