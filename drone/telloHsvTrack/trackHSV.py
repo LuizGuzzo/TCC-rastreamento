@@ -37,7 +37,7 @@ frameHeight = height
  
  
 global imgContour
-global dir;
+global dir
 def empty(a):
     pass
  
@@ -220,7 +220,6 @@ while True:
        me.takeoff()
        startCounter = 1
  
- 
     if dir == 1:
        me.yaw_velocity = -60
     elif dir == 2:
@@ -239,7 +238,7 @@ while True:
     stack = stackImages(0.9, ([img, result], [imgDil, imgContour]))
     cv2.imshow('Horizontal Stacking', stack)
  
-    if cv2.waitKey(1) &amp; 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         me.land()
         break
  

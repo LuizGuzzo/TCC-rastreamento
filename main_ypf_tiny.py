@@ -15,7 +15,7 @@ import drone.telloHsvTrack.colorDetection as con
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-# ap.add_argument("-i", "--input", default = 'inout/DJI_0127.mp4',	help="path to input video")
+ap.add_argument("-i", "--input", default = 0,	help="path to input video")
 ap.add_argument("-o", "--output", default = 'inout/test.avi',	help="path to output video")
 ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco-tiny',	help="base path to YOLO directory")
 ap.add_argument("-c", "--confidence", type=float, default=0.3,	help="minimum probability to filter weak detections")
@@ -35,25 +35,40 @@ def getMousePosition(event,x,y,flags,param):
 	
 def display(img):
 	y = 20
-	cv2.rectangle(img,(0,0),(200,(y*5)+5 ),(255,255,255),cv2.FILLED)
-	for info in infos:
-		cv2.putText(img, info , (10, y), cv2.FONT_HERSHEY_PLAIN,1,(255,119,0), 2)
+	size = len(infos)
+	cv2.rectangle(img,(0,0),(200,size*y+5 ),(255,255,255),cv2.FILLED)
+	for key,value in infos.items():
+		cv2.putText(img,
+			key+": "+str(value),
+			(10, y), cv2.FONT_HERSHEY_PLAIN,1,(255,119,0), 2)
 		y += 20
 
 global infos
 
-vs = cv2.VideoCapture(0)
-# time.sleep(2.0)
+vs = cv2.VideoCapture(args["input"])
 writer = None
+
+try:
+	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
+		else cv2.CAP_PROP_FRAME_COUNT
+	total = int(vs.get(prop))
+	print("[INFO] {} total frames in video".format(total))
+
+except:
+	print("[INFO] could not determine # of frames in video")
+	print("[INFO] no approx. completion time can be provided")
+	total = -1
 
 mouse = None
 filterStarted = False
-infos = [None]*5
-infos[0] = "System Status:"
-infos[1] = "FPS: "
-infos[2] = "Drone Command: None "
-infos[3] = "Track: None "
-infos[4] = "Class: None "
+infos = {
+	"System Status":"",
+	"FPS": 0,
+	"Drone": None,
+	"Track": None,
+	"Class": None,
+}
+
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
 
@@ -86,7 +101,7 @@ while True:
 			for obj in objects_detected:
 				if obj.check_centroid(centroid_predicted) is True:
 					alvo = obj
-					infos[4] = "class: {}".format(alvo.category)
+					infos["Class"] = alvo.category
 			
 			if alvo is None:
 				print("[ERROR] - chose again the object")
@@ -113,15 +128,14 @@ while True:
 			if ((obj.check_centroid(centroid_predicted) is True) and (find is False)):
 				if obj.check_category(alvo.category) is True:
 					centroid_predicted = particleFilter.filter_steps(obj.get_centroid())
-					# obj.set_color((0,255,0))
+					obj.set_color((0,255,0))
 					alvo = obj
 					find = True
 		
 		particleFilter.drawBox(framecpy)
 		cmd = con.movimentRules(framecpy,alvo)
-		infos[2] = "Drone Command: {}".format(str(cmd))
-		infos[3] = "Track: Tracking"
-		
+		infos["Drone"] = cmd
+		infos["Track"] = "Tracking"		
 
 		if (centroid_predicted is False): # lose tracking (max exceeded)
 			print("[ERROR] - chose again the object")
@@ -129,14 +143,15 @@ while True:
 			filterStarted = False
 			alvo = None
 			cmd = None
-			infos[2] = "Drone Command: None "
-			infos[3] = "Track: Lost Tracking"
-			infos[4] = "class: None"
+			infos["Drone"] = cmd
+			infos["Track"] = "Lost Tracking"
+			infos["Class"] = alvo
+
 		
 		elif ((find is False)): # lose tracking (non max exceeded)
 			centroid_predicted = None
 			centroid_predicted = particleFilter.filter_steps(centroid_predicted)
-			infos[3] = "Track: Predicting"
+			infos["Track"] = "Predicting"
 			if centroid_predicted is not False:
 				alvo.area = None # avoid unwanted approach
 				alvo.centerX , alvo.centerY = (centroid_predicted[0],centroid_predicted[1])
@@ -149,7 +164,7 @@ while True:
 	elap = (end - start)
 	fps = round(1/elap,2)
 
-	infos[1] = "FPS: {}".format(str(fps))
+	infos["FPS"] = fps
 
 	display(framecpy)
 
@@ -163,6 +178,11 @@ while True:
 
 		fourcc = cv2.VideoWriter_fourcc(*"MJPG")
 		writer = cv2.VideoWriter(args["output"], fourcc, int(fps+1), (frame.shape[1], frame.shape[0]), True)
+
+		if total > 0:
+			elap = (end - start)
+			print("[INFO] single frame took {:.4f} seconds".format(elap))
+			print("[INFO] estimated total time to finish: {:.4f} | in minutes> {:.2f}".format(elap * total, (elap * total)/60))
 	
 	writer.write(framecpy)
 
