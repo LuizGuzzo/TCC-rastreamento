@@ -11,143 +11,201 @@ import os
 
 import particle_filter.pf_tools as pf
 import yolo.yolOO as yoo
-
-# TODO:
-# calibrar o FP para a situação da gravação
-# modificar a frequencia de atualização para ser em 0.5 sec em vez de frame por frame para o FP
-# colocar um input descente
-# 
-# 
-# 
-# future:
-# acelerar processamento
-# pegar o algoritmo da bola do air stick cam e tentar molda-lo aq    
-
+import drone.telloHsvTrack.colorDetection as con
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--input", default = 'inout/DJI_0127.mp4',	help="path to input video")
-ap.add_argument("-o", "--output", default = 'inout/DJI_0127.avi',	help="path to output video")
-ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco',	help="base path to YOLO directory")
-ap.add_argument("-c", "--confidence", type=float, default=0.5,	help="minimum probability to filter weak detections")
+ap.add_argument("-i", "--input", default = 0,	help="path to input video")
+ap.add_argument("-o", "--output", default = 'inout/test.avi',	help="path to output video")
+ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco-tiny',	help="base path to YOLO directory")
+ap.add_argument("-c", "--confidence", type=float, default=0.3,	help="minimum probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3,	help="threshold when applyong non-maxima suppression")
 ap.add_argument("-p","--particles", type=float, default=500, help="total of particles on the particle filter")
-ap.add_argument("-mf","--maxframelost",type=float, default=60, help="the max of frames can be lost")
+ap.add_argument("-mf","--maxframelost",type=float, default=30, help="the max of frames can be lost")
 ap.add_argument("-dt","--deltat",type=float, default=0.003, help="")
 ap.add_argument("-vm","--velmax",type=float, default=4000, help="")
 
 args = vars(ap.parse_args())
 
+def getMousePosition(event,x,y,flags,param):
+    global mouse,filterStarted
+    if event == cv2.EVENT_LBUTTONDBLCLK:
+        mouse = (x,y)
+        filterStarted = True
+	
+def display(img):
+	y = 20
+	size = len(infos)
+	cv2.rectangle(img,(0,0),(200,size*y+5 ),(255,255,255),cv2.FILLED)
+	for key,value in infos.items():
+		cv2.putText(img,
+			key+": "+str(value),
+			(10, y), cv2.FONT_HERSHEY_PLAIN,1,(255,119,0), 2)
+		y += 20
 
-# initialize the video stream, pointer to output video file, and
-# frame dimensions
+global infos
+
 vs = cv2.VideoCapture(args["input"])
 writer = None
 
-# try to determine the total number of frames in the video file
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
 		else cv2.CAP_PROP_FRAME_COUNT
 	total = int(vs.get(prop))
 	print("[INFO] {} total frames in video".format(total))
 
-# an error occurred while trying to determine the total
-# number of frames in the video file
 except:
 	print("[INFO] could not determine # of frames in video")
 	print("[INFO] no approx. completion time can be provided")
 	total = -1
 
-filter_is_on = False
+mouse = None
+filterStarted = False
+infos = {
+	"System Status":"",
+	"FPS": 0,
+	"Drone": None,
+	"Track": None,
+	"Class": None,
+}
+
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
 
-# loop over frames from the video file stream
 while True:
-	# read the next frame from the file
 	(grabbed, frame) = vs.read()
-
-	# if the frame was not grabbed, then we have reached the end
-	# of the stream
-	if not grabbed:
-		break
-
-	if filter_is_on is False:
-
-		framecpy = frame.copy()
-		objects_detected = yoloCNN.get_objects(framecpy)
-		for obj in objects_detected:
-			obj.draw(framecpy)
-
-		cv2.imshow("objects_detected",framecpy)
-		cv2.waitKey(1)
-		cv2.destroyAllWindows()
-
-		# centroid = input("digite o centroide desejado")
-		centroid_predicted = (968,543)
-
-		alvo = None
-		for obj in objects_detected:
-			if obj.check_centroid(centroid_predicted) is True:
-				alvo = obj
-		
-		particleFilter = pf.ParticleFilter(args["particles"],centroid_predicted,
-							args["maxframelost"],args["deltat"],args["velmax"])
-		centroid_predicted = particleFilter.filter_steps(centroid_predicted)
-
-		filter_is_on = True
-
+	framecpy = frame.copy()
 
 	start = time.time()
 
-	#CNN
-	objects_detected = yoloCNN.get_objects(frame)
+	if not grabbed:
+		break
 
-	
+	if filterStarted is False:
 
-	find = False
-	for obj in objects_detected:
+		
+		objects_detected = yoloCNN.get_objects(frame)
+		for obj in objects_detected:
+			obj.draw(framecpy)
 
-		if obj.check_centroid(centroid_predicted) is True:
-			# print("centroid confirmed")
-			if obj.check_category(alvo.category) is True:
-				# print("category confirmed")
-				centroid_predicted = particleFilter.filter_steps(obj.get_centroid())
-				obj.set_color((0,255,0)) # green
-				alvo = obj # alvo poderia ser apenas a classe do objeto (e oque garante hipoteticamente que seja o mesmo objeto)
-				find = True
+		cv2.namedWindow('output')
+		cv2.setMouseCallback('output',getMousePosition)
+		cv2.putText(framecpy, "CHOSE THE OBJECT", (10, 400), cv2.FONT_HERSHEY_PLAIN, 4, (255, 255, 255), 3)
+		cv2.waitKey(1)
 
-		obj.draw(frame)
+		if mouse is not None:
+			centroid_predicted = mouse
+			
+			alvo = None
+			for obj in objects_detected:
+				if obj.check_centroid(centroid_predicted) is True:
+					alvo = obj
+					infos["Class"] = alvo.category
+			
+			if alvo is None:
+				print("[ERROR] - chose again the object")
+				mouse = None
+				filterStarted = False
+				continue
 
-	if find is False:
-		centroid_predicted = None
-		centroid_predicted = particleFilter.filter_steps(centroid_predicted)
+			particleFilter = pf.ParticleFilter(args["particles"],centroid_predicted,
+								args["maxframelost"],args["deltat"],args["velmax"])
+			centroid_predicted = particleFilter.filter_steps(centroid_predicted)
+			mouse = None
 
-	particleFilter.drawBox(frame)
+			cv2.destroyAllWindows()
+			con.createMovRulesTrackers()
 
-	if centroid_predicted is False : # lose tracking (max exceeded)
-		filter_is_on = False
+	else:
 
-	end = time.time()
+		#CNN
+		objects_detected = yoloCNN.get_objects(frame)
+
+		find = False
+		for obj in objects_detected:
+			if ((obj.check_centroid(centroid_predicted) is True) and (find is False)):
+				if obj.check_category(alvo.category) is True:
+					centroid_predicted = particleFilter.filter_steps(obj.get_centroid())
+					obj.set_color((0,255,0))
+					alvo = obj
+					find = True
+			obj.draw(framecpy)
+		
+		particleFilter.drawBox(framecpy)
+		cmd = con.movimentRules(framecpy,alvo)
+		infos["Drone"] = cmd
+		infos["Track"] = "Tracking"		
+
+		if (centroid_predicted is False): # lose tracking (max exceeded)
+			print("[ERROR] - chose again the object")
+			mouse = None
+			filterStarted = False
+			alvo = None
+			cmd = None
+			infos["Drone"] = cmd
+			infos["Track"] = "Lost Tracking"
+			infos["Class"] = alvo
+
+		
+		elif ((find is False)): # lose tracking (non max exceeded)
+			centroid_predicted = None
+			centroid_predicted = particleFilter.filter_steps(centroid_predicted)
+			infos["Track"] = "Predicting"
+			if centroid_predicted is not False:
+				alvo.area = None # avoid unwanted approach
+				alvo.centerX , alvo.centerY = (centroid_predicted[0],centroid_predicted[1])
+
+		#controller
+
+		if cmd == "Fwd":
+
+		elif cmd == "Bwd":
+			
+		elif cmd == "Lft":
+			
+		elif cmd == "!cw":
+			
+		elif cmd == "cw":
+
+		elif cmd == "Rgt":
+
+		elif cmd == "Up":
+
+		elif cmd == "Dwn":
+
+		else:
+			
+
+			
 		
 
-	# check if the video writer is None
-	if writer is None:
-		# initialize our video writer
-		fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-		writer = cv2.VideoWriter(args["output"], fourcc, 30, (frame.shape[1], frame.shape[0]), True)
+	end = time.time()
+	elap = (end - start)
+	fps = round(1/elap,2)
 
-		# some information on processing single frame
+	infos["FPS"] = fps
+
+	display(framecpy)
+
+	# print("FPS: {}".format(str(round(fps, 2))))
+	cv2.imshow("output",framecpy)
+
+	if cv2.waitKey(1) & 0xFF == ord('q'):
+		break
+
+	if writer is None:
+
+		fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+		writer = cv2.VideoWriter(args["output"], fourcc, int(fps+1), (frame.shape[1], frame.shape[0]), True)
+
 		if total > 0:
 			elap = (end - start)
 			print("[INFO] single frame took {:.4f} seconds".format(elap))
 			print("[INFO] estimated total time to finish: {:.4f} | in minutes> {:.2f}".format(elap * total, (elap * total)/60))
+	
+	writer.write(framecpy)
 
-	cv2.imshow("result",frame)
-	cv2.waitKey(0)
-	# cv2.destroyAllWindows()
-	# write the output frame to disk
-	writer.write(frame)
+	
 
 # release the file pointers
 print("[INFO] cleaning up...")

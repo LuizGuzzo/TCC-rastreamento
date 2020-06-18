@@ -67,15 +67,19 @@ def getObjectsHSV(img,imgCopy):
 	return detections
 
 
-def movimentRules(imgCopy,detection):
+def movimentRules(img,detection):
 	
 	areaMin = cv2.getTrackbarPos("Area Min","Moviment Rules")
 	areaMax = cv2.getTrackbarPos("Area Max","Moviment Rules")
 	xOffSet = cv2.getTrackbarPos("xOffSet","Moviment Rules")
 	yOffSet = cv2.getTrackbarPos("yOffSet","Moviment Rules")
 
-	frameHeight = imgCopy.shape[0]
-	frameWidth = imgCopy.shape[1]
+	frameHeight = img.shape[0]
+	frameWidth = img.shape[1]
+
+	overlay = img.copy()
+	rectangleCoords = None
+	color = None
 
 	widthPart = int((int(frameWidth/2)-xOffSet) /2)
 	(x,y,w,h,cx,cy,area) = (detection.x , detection.y , detection.w , detection.h , detection.centerX , detection.centerY , detection.area)
@@ -84,55 +88,64 @@ def movimentRules(imgCopy,detection):
 
 	if area is not None:
 		if(area < areaMin):
-			cv2.rectangle(imgCopy, (x , y ),
-					(x + w , y + h ),
-					(255, 0, 0), 5)
+			rectangleCoords = [x,y,x+w,y+h]
+			color = (255,0,0)
 			cmd = "Fwd"
 		elif(area > areaMax):
-			cv2.rectangle(imgCopy, (x , y ),
-					(x + w , y + h ), 
-					(0, 0, 255), 5)
+			rectangleCoords = [x,y,x+w,y+h]
+			color = (0,0,255)
 			cmd = "Bwd"
 
 	if (cx < int(frameWidth/2)-xOffSet):
 		if (cx < widthPart):
-			cv2.rectangle(imgCopy,(0,int(frameHeight/2-yOffSet)),
-					(widthPart, int(frameHeight/2)+yOffSet),
-					(0,153,255),cv2.FILLED)
+			rectangleCoords = 	[0,int(frameHeight/2-yOffSet),
+								widthPart, int(frameHeight/2)+yOffSet]
+			color = (0,153,255)
 			cmd = "Lft"
 		else:
-			cv2.rectangle(imgCopy,(widthPart,int(frameHeight/2-yOffSet)),
-					(int(frameWidth/2)-xOffSet, int(frameHeight/2)+yOffSet),
-					(0,153,255),cv2.FILLED)
+			rectangleCoords = 	[widthPart,int(frameHeight/2-yOffSet),
+								int(frameWidth/2)-xOffSet, int(frameHeight/2)+yOffSet]
+			color = (0,153,255)
 			cmd = "!cw"
 	elif (cx > int(frameWidth/2)+xOffSet):
 		if (cx < frameWidth-widthPart):
-			cv2.rectangle(imgCopy,(int(frameWidth/2)+xOffSet, int(frameHeight/2-yOffSet)),
-					(frameWidth-widthPart,int(frameHeight/2)+yOffSet),
-					(0,153,255),cv2.FILLED)
+			rectangleCoords = 	[int(frameWidth/2)+xOffSet, int(frameHeight/2-yOffSet),
+								frameWidth-widthPart,int(frameHeight/2)+yOffSet]
+			color = (0,153,255)
 			cmd = "cw"
 		else:
-			cv2.rectangle(imgCopy,(frameWidth-widthPart, int(frameHeight/2-yOffSet)),
-					(frameWidth,int(frameHeight/2)+yOffSet),
-					(0,153,255),cv2.FILLED)
+			rectangleCoords = 	[frameWidth-widthPart, int(frameHeight/2-yOffSet),
+								frameWidth,int(frameHeight/2)+yOffSet]
+			color = (0,153,255)
 			cmd = "Rgt"
 			
 	elif (cy < int(frameHeight / 2) - yOffSet):
-		cv2.rectangle(imgCopy,(int(frameWidth/2-xOffSet),0),
-				(int(frameWidth/2+xOffSet),int(frameHeight/2)-yOffSet),
-				(0,153,255),cv2.FILLED)
+		rectangleCoords = 	[int(frameWidth/2-xOffSet),0,
+							int(frameWidth/2+xOffSet),int(frameHeight/2)-yOffSet]
+		color = (0,153,255)
 		cmd = "Up"
 	elif (cy > int(frameHeight / 2) + yOffSet):
-		cv2.rectangle(imgCopy,(int(frameWidth/2-xOffSet),int(frameHeight/2)+yOffSet),
-				(int(frameWidth/2+xOffSet),frameHeight),
-				(0,153,255),cv2.FILLED)
+		rectangleCoords = 	[int(frameWidth/2-xOffSet),int(frameHeight/2)+yOffSet,
+							int(frameWidth/2+xOffSet),frameHeight]
+		color = (0,153,255)
 		cmd = "Dwn"
 
 	if cmdPrint is True:
-		cv2.putText(imgCopy, cmd , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
-	cv2.line(imgCopy, (int(frameWidth/2),int(frameHeight/2)), (cx,cy), (0, 0, 255), 3)
+		cv2.putText(img, cmd , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
+	
+	if rectangleCoords is not None:
+		cv2.rectangle(overlay,
+					(rectangleCoords[0],rectangleCoords[1]),
+					(rectangleCoords[2],rectangleCoords[3]),
+					color,cv2.FILLED)
+		alpha = 0.4
+		cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0,img)
+		
 
-	display(imgCopy)
+	display(img)
+	cv2.line(img, (int(frameWidth/2),int(frameHeight/2)), (cx,cy), (0, 0, 255), 3)
+
+	
 	
 	return cmd
  
