@@ -34,13 +34,8 @@ class detection(): # obj_detected
 		cv2.putText(image,centertext3,(self.x, self.y + self.h+60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
 
 		return image
-
+	
 	def check_centroid(self,centroid):
-		# print("centroid X:{} Y:{}".format(centroid[0],centroid[1]))
-		# print("x: {} + w: {} = {}".format(self.x,self.w,self.x +self.w))
-		# print("y: {} + h: {} = {}".format(self.y,self.h,self.y +self.h))
-		if centroid is False or centroid is None :
-			return False
 		if (self.x <= centroid[0] <= self.x +self.w) and (self.y <= centroid[1] <= self.y +self.h):
 			return True
 		return False

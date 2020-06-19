@@ -43,10 +43,17 @@ def display(img):
 			(10, y), cv2.FONT_HERSHEY_PLAIN,1,(255,119,0), 2)
 		y += 20
 
+def euclidianDistance(centerA,centerB):
+	ax = centerA[0]
+	ay = centerA[1]
+	bx = centerB[0]
+	by = centerB[1]
+	dist = (pow((ax-bx),2) + pow((ay-by),2))**(1/2)
+	return dist
+
 global infos
 
 vs = cv2.VideoCapture(args["input"])
-writer = None
 
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
@@ -59,6 +66,7 @@ except:
 	print("[INFO] no approx. completion time can be provided")
 	total = -1
 
+writer = None
 mouse = None
 filterStarted = False
 infos = {
@@ -69,12 +77,29 @@ infos = {
 	"Class": None,
 }
 
+# try:
+# 	me = Tello()
+# 	me.connect()
+# 	me.for_back_velocity = 0
+# 	me.left_right_velocity = 0
+# 	me.up_down_velocity = 0
+# 	me.yaw_velocity = 0
+# 	me.speed = 0
+# 	print(me.get_battery())
+ 
+# 	me.streamoff()
+# 	me.streamon()
+# 	telloAvaible = True
+# except:
+# 	telloAvaible = False
+
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
 
 while True:
 	(grabbed, frame) = vs.read()
 	framecpy = frame.copy()
+
 
 	start = time.time()
 
@@ -122,21 +147,29 @@ while True:
 		objects_detected = yoloCNN.get_objects(frame)
 
 		find = False
+		closest = float('inf')
 		for obj in objects_detected:
-			if ((obj.check_centroid(centroid_predicted) is True) and (find is False)):
-				if obj.check_category(alvo.category) is True:
-					centroid_predicted = particleFilter.filter_steps(obj.get_centroid())
-					obj.set_color((0,255,0))
+			obj.draw(framecpy)
+			if (obj.check_category(alvo.category) is True):
+				dist = euclidianDistance(centroid_predicted,obj.get_centroid())
+				if (dist < closest):
+					closest = dist
 					alvo = obj
 					find = True
-			obj.draw(framecpy)
+		
+		if find is True:
+			print('win: {} | {}'.format(closest,alvo))
+			centroid_predicted = particleFilter.filter_steps(alvo.get_centroid())
+			alvo.set_color((0,255,0))
+			alvo.draw(framecpy)
 		
 		particleFilter.drawBox(framecpy)
 		cmd = con.movimentRules(framecpy,alvo)
 		infos["Drone"] = cmd
 		infos["Track"] = "Tracking"		
 
-		if (centroid_predicted is False): # lose tracking (max exceeded)
+		# lose tracking (max exceeded)
+		if (centroid_predicted is False): 
 			print("[ERROR] - chose again the object")
 			mouse = None
 			filterStarted = False
@@ -146,8 +179,8 @@ while True:
 			infos["Track"] = "Lost Tracking"
 			infos["Class"] = alvo
 
-		
-		elif ((find is False)): # lose tracking (non max exceeded)
+		# lose tracking (non max exceeded)
+		elif ((find is False)): 
 			centroid_predicted = None
 			centroid_predicted = particleFilter.filter_steps(centroid_predicted)
 			infos["Track"] = "Predicting"
@@ -155,26 +188,26 @@ while True:
 				alvo.area = None # avoid unwanted approach
 				alvo.centerX , alvo.centerY = (centroid_predicted[0],centroid_predicted[1])
 
-		#controller
+		# #controller
 
-		if cmd == "Fwd":
+		# if cmd == "Fwd":
 
-		elif cmd == "Bwd":
+		# elif cmd == "Bwd":
 			
-		elif cmd == "Lft":
+		# elif cmd == "Lft":
 			
-		elif cmd == "!cw":
+		# elif cmd == "!cw":
 			
-		elif cmd == "cw":
+		# elif cmd == "cw":
 
-		elif cmd == "Rgt":
+		# elif cmd == "Rgt":
 
-		elif cmd == "Up":
+		# elif cmd == "Up":
 
-		elif cmd == "Dwn":
+		# elif cmd == "Dwn":
 
-		else:
-			
+		# else:
+
 
 			
 		
