@@ -22,7 +22,7 @@ ap.add_argument("-c", "--confidence", type=float, default=0.3,	help="minimum pro
 ap.add_argument("-t", "--threshold", type=float, default=0.3,	help="threshold when applyong non-maxima suppression")
 ap.add_argument("-p","--particles", type=float, default=500, help="total of particles on the particle filter")
 ap.add_argument("-mf","--maxframelost",type=float, default=30, help="the max of frames can be lost")
-ap.add_argument("-dt","--deltat",type=float, default=0.003, help="")
+ap.add_argument("-dt","--deltat",type=float, default=0.015, help="")
 ap.add_argument("-vm","--velmax",type=float, default=4000, help="")
 
 args = vars(ap.parse_args())
@@ -158,7 +158,6 @@ while True:
 					find = True
 		
 		if find is True:
-			print('win: {} | {}'.format(closest,alvo))
 			centroid_predicted = particleFilter.filter_steps(alvo.get_centroid())
 			alvo.set_color((0,255,0))
 			alvo.draw(framecpy)
