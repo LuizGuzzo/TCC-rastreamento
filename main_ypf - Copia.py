@@ -13,15 +13,14 @@ from djitellopy import Tello
 import particle_filter.pf_tools as pf
 import yolo.yolOO as yoo
 import drone.telloHsvTrack.colorDetection as con
-from centroidtracker import CentroidTracker
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", default = 0,	help="path to input video")
 ap.add_argument("-o", "--output", default = 'inout/test.avi',	help="path to output video")
 ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco-tiny',	help="base path to YOLO directory")
-ap.add_argument("-c", "--confidence", type=float, default=0.4,	help="minimum probability to filter weak detections")
-ap.add_argument("-t", "--threshold", type=float, default=0.1,	help="threshold when applyong non-maxima suppression")
+ap.add_argument("-c", "--confidence", type=float, default=0.3,	help="minimum probability to filter weak detections")
+ap.add_argument("-t", "--threshold", type=float, default=0.3,	help="threshold when applyong non-maxima suppression")
 ap.add_argument("-p","--particles", type=float, default=500, help="total of particles on the particle filter")
 ap.add_argument("-mf","--maxframelost",type=float, default=30, help="the max of frames can be lost")
 ap.add_argument("-dt","--deltat",type=float, default=0.015, help="")
@@ -52,7 +51,6 @@ def euclidianDistance(centerA,centerB):
 	by = centerB[1]
 	dist = (pow((ax-bx),2) + pow((ay-by),2))**(1/2)
 	return dist
-
 
 global infos
 
@@ -114,8 +112,8 @@ while True:
 	if filterStarted is False:
 
 		
-		objects_array = yoloCNN.get_objects(frame)
-		for obj in objects_array:
+		objects_detected = yoloCNN.get_objects(frame)
+		for obj in objects_detected:
 			obj.draw(framecpy)
 
 		cv2.namedWindow('output')
@@ -127,78 +125,42 @@ while True:
 			centroid_predicted = mouse
 			
 			alvo = None
-			for obj in objects_array:
+			for obj in objects_detected:
 				if obj.check_centroid(centroid_predicted) is True:
 					alvo = obj
-					break
+					infos["Class"] = alvo.category
 			
 			if alvo is None:
 				print("[ERROR] - chose again the object")
 				mouse = None
 				filterStarted = False
 				continue
-			else:
-				ct = CentroidTracker(args["maxframelost"])
-				infos["Class"] = alvo.category
 
-				objectsSameClass = []
-				for obj in objects_array:
-					if obj.check_category(alvo.category):
-						objectsSameClass.append(obj)
-				
-				objects_dic = ct.update(objectsSameClass)
+			particleFilter = pf.ParticleFilter(args["particles"],centroid_predicted,
+								args["maxframelost"],args["deltat"],args["velmax"])
+			centroid_predicted = particleFilter.filter_steps(centroid_predicted)
+			mouse = None
 
-				for i,obj in objects_dic.items():
-					if obj.check_centroid(centroid_predicted) is True:
-						alvo.id = i
-						break
-				
-				particleFilter = pf.ParticleFilter(args["particles"],centroid_predicted,
-									args["maxframelost"],args["deltat"],args["velmax"])
-				centroid_predicted = particleFilter.filter_steps(centroid_predicted)
-				mouse = None
-
-				cv2.destroyAllWindows()
-				con.createMovRulesTrackers()
+			cv2.destroyAllWindows()
+			con.createMovRulesTrackers()
 
 	else:
 
 		#CNN
-		objects_array = yoloCNN.get_objects(frame)
-		objectsSameClass = []
-		
-
-		
-		for obj in objects_array:
-			if (obj.check_category(alvo.category) is True):
-				objectsSameClass.append(obj)
-			else:
-				obj.draw(framecpy)
-
-			
-		#MultiTrack
-		objects_dic = ct.update(objectsSameClass)
+		objects_detected = yoloCNN.get_objects(frame)
 
 		find = False
-		for i,obj in objects_dic.items():
-			if (ct.disappeared[i] == 0):
-				if (alvo.id == i):
+		closest = float('inf')
+		for obj in objects_detected:
+			obj.draw(framecpy)
+			if (obj.check_category(alvo.category) is True):
+				dist = euclidianDistance(centroid_predicted,obj.get_centroid())
+				if (dist < closest):
+					closest = dist
 					alvo = obj
 					find = True
-				else:
-					obj.draw(framecpy)
-			else:
-				(cx,cy) = obj.get_centroid()
-				text1 = "ID: {}".format(i)
-				text2 = "{}/{}".format(ct.disappeared[i],args["maxframelost"])
-				cv2.putText(framecpy, text1, (cx - 10, cy - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, obj.color, 2)
-				cv2.circle(framecpy, (cx, cy), 2, obj.color, -1)
-				cv2.putText(framecpy, text2, (cx + 10, cy + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, obj.color, 2)
-
-				if(alvo.id == i):
-					obj.set_prediction(centroid_predicted)
 		
-		if find is True and alvo is not None:
+		if find is True:
 			centroid_predicted = particleFilter.filter_steps(alvo.get_centroid())
 			alvo.set_color((0,255,0))
 			alvo.draw(framecpy)

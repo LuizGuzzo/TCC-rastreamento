@@ -17,7 +17,7 @@ me.up_down_velocity = 0
 me.yaw_velocity = 0
 me.speed = 0
  
-print(me.get_battery())
+# print(me.get_battery())
  
 me.streamoff()
 me.streamon()

@@ -98,7 +98,7 @@ class yoloCNN():
 				
 				(x, y) = (boxes[i][0], boxes[i][1])
 				(w, h) = (boxes[i][2], boxes[i][3])
-				classID = classIDs[i]
+				classID = " " #classIDs[i]
 				color = [int(c) for c in self.COLORS[classIDs[i]]]
 				category = self.LABELS[classIDs[i]]
 				confidence = confidences[i]
