@@ -5,7 +5,7 @@ import time
 ######################################################################
 width = 320  # WIDTH OF THE IMAGE
 height = 240  # HEIGHT OF THE IMAGE
-startCounter =1   #  0 FOR FIGHT 1 FOR TESTING
+startCounter =0   #  0 FOR FIGHT 1 FOR TESTING
 ######################################################################
  
 # CONNECT TO TELLO
@@ -17,7 +17,7 @@ me.up_down_velocity = 0
 me.yaw_velocity = 0
 me.speed = 0
  
-# print(me.get_battery())
+print(me.get_battery())
  
 me.streamoff()
 me.streamon()
@@ -40,9 +40,9 @@ while True:
         me.land()
         startCounter = 1
  
-    # # SEND VELOCITY VALUES TO TELLO
-    # if me.send_rc_control:
-    #     me.send_rc_control(me.left_right_velocity, me.for_back_velocity, me.up_down_velocity, me.yaw_velocity)
+    # SEND VELOCITY VALUES TO TELLO
+    if me.send_rc_control:
+        me.send_rc_control(me.left_right_velocity, me.for_back_velocity, me.up_down_velocity, me.yaw_velocity)
  
     # DISPLAY IMAGE
     cv2.imshow("MyResult", img)
