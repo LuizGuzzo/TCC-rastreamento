@@ -1,3 +1,5 @@
 opencv-python==4.2.0.34
 numpy==1.18.1
 https://github.com/damiafuentes/DJITelloPy/archive/master.zip
+imutils
+scipy==1.5.0

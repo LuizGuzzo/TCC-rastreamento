@@ -197,8 +197,8 @@ def createParamTrackers():
 def createMovRulesTrackers():
 	cv2.namedWindow("Moviment Rules")
 	cv2.resizeWindow("Moviment Rules",640,240)
-	cv2.createTrackbar("Area Min","Moviment Rules",0,1000000, empty)
-	cv2.createTrackbar("Area Max","Moviment Rules",1000000,1000000, empty)
+	cv2.createTrackbar("Area Min","Moviment Rules",2000,1000000, empty)
+	cv2.createTrackbar("Area Max","Moviment Rules",7000,1000000, empty)
 	cv2.createTrackbar("xOffSet","Moviment Rules",100,1080, empty)
 	cv2.createTrackbar("yOffSet","Moviment Rules",100,1080, empty)
 
@@ -280,24 +280,24 @@ def main():
 			me.takeoff()
 			startCounter = 1
 
-		# if cmd == "Fwd":
-
-		# elif cmd == "Bwd":
-			
-		if cmd == "Lft":
-			me.yaw_velocity = -30	
+		if cmd == "Fwd":
+			me.forward_back_velocity = 10
+		elif cmd == "Bwd":
+			me.forward_back_velocity = -10
+		elif cmd == "Lft":
+			me.left_right_velocity = -30	
 		elif cmd == "!cw":
 			me.yaw_velocity = -30
 		elif cmd == "cw":
 			me.yaw_velocity = 30
 		elif cmd == "Rgt":
-			me.yaw_velocity = 30
+			me.left_right_velocity = 30
 		elif cmd == "Up":
-			me.up_down_velocity= 30
+			me.up_down_velocity= 20
 		elif cmd == "Dwn":
-			me.up_down_velocity= -30
+			me.up_down_velocity= -20
 		else:
-			me.left_right_velocity = 0; me.for_back_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0
+			me.left_right_velocity = 0; me.forward_back_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0
 
 		# SEND VELOCITY VALUES TO TELLO
 	
