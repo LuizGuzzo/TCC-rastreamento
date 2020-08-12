@@ -33,7 +33,6 @@ def getMousePosition(event,x,y,flags,param):
     global mouse,filterStarted
     if event == cv2.EVENT_LBUTTONDBLCLK:
         mouse = (x,y)
-        filterStarted = True
 	
 def display(img):
 	y = 20
@@ -44,15 +43,6 @@ def display(img):
 			key+": "+str(value),
 			(10, y), cv2.FONT_HERSHEY_PLAIN,1,(255,119,0), 2)
 		y += 20
-
-def euclidianDistance(centerA,centerB):
-	ax = centerA[0]
-	ay = centerA[1]
-	bx = centerB[0]
-	by = centerB[1]
-	dist = (pow((ax-bx),2) + pow((ay-by),2))**(1/2)
-	return dist
-
 
 global infos
 
@@ -112,7 +102,12 @@ while True:
 		break
 
 	if filterStarted is False:
-
+		
+		mouse = None
+		alvo = None
+		centroid_predicted = None
+		cmd = None
+		ct = None
 		
 		objects_array = yoloCNN.get_objects(frame)
 		for obj in objects_array:
@@ -124,9 +119,9 @@ while True:
 		cv2.waitKey(1)
 
 		if mouse is not None:
+
 			centroid_predicted = mouse
 			
-			alvo = None
 			for obj in objects_array:
 				if obj.check_centroid(centroid_predicted) is True:
 					alvo = obj
@@ -134,30 +129,26 @@ while True:
 			
 			if alvo is None:
 				print("[ERROR] - chose again the object")
-				mouse = None
-				filterStarted = False
 				continue
 			else:
+				
 				ct = CentroidTracker(args["maxframelost"])
 				infos["Class"] = alvo.category
 
 				objectsSameClass = []
-				for obj in objects_array:
+				for (i,obj) in enumerate(objects_array):
 					if obj.check_category(alvo.category):
 						objectsSameClass.append(obj)
+						if obj.check_centroid(centroid_predicted) is True:
+							alvo.id = i
 				
-				objects_dic = ct.update(objectsSameClass)
-
-				for i,obj in objects_dic.items():
-					if obj.check_centroid(centroid_predicted) is True:
-						alvo.id = i
-						break
+				ct.update(objectsSameClass)
 				
 				particleFilter = pf.ParticleFilter(args["particles"],centroid_predicted,
 									args["maxframelost"],args["deltat"],args["velmax"])
 				centroid_predicted = particleFilter.filter_steps(centroid_predicted)
-				mouse = None
 
+				filterStarted = True
 				cv2.destroyAllWindows()
 				con.createMovRulesTrackers()
 
@@ -166,14 +157,11 @@ while True:
 		#CNN
 		objects_array = yoloCNN.get_objects(frame)
 		objectsSameClass = []
-		
-
-		
 		for obj in objects_array:
 			if (obj.check_category(alvo.category) is True):
 				objectsSameClass.append(obj)
 			else:
-				obj.draw(framecpy)
+				obj.draw(framecpy) # draw generic objects
 
 			
 		#MultiTrack
@@ -186,7 +174,7 @@ while True:
 					alvo = obj
 					find = True
 				else:
-					obj.draw(framecpy)
+					obj.draw(framecpy) # draw objects with same class
 			else:
 				(cx,cy) = obj.get_centroid()
 				text1 = "ID: {}".format(i)
@@ -198,35 +186,36 @@ while True:
 				if(alvo.id == i):
 					obj.set_prediction(centroid_predicted)
 		
-		if find is True and alvo is not None:
-			centroid_predicted = particleFilter.filter_steps(alvo.get_centroid())
-			alvo.set_color((0,255,0))
-			alvo.draw(framecpy)
-		
-		particleFilter.drawBox(framecpy)
-		cmd = con.movimentRules(framecpy,alvo)
-		infos["Drone"] = cmd
-		infos["Track"] = "Tracking"		
 
-		# lose tracking (max exceeded)
-		if (centroid_predicted is False): 
-			print("[ERROR] - chose again the object")
-			mouse = None
-			filterStarted = False
-			alvo = None
-			cmd = None
-			infos["Drone"] = cmd
-			infos["Track"] = "Lost Tracking"
-			infos["Class"] = alvo
+		if find is True:
+			centroid_predicted = particleFilter.filter_steps(alvo.get_centroid())
+			cmd = con.movimentRules(framecpy,alvo)
+
+			alvo.set_color((0,255,0))
+			alvo.draw(framecpy) # draw the target
+			infos["Track"] = "Tracking"		
 
 		# lose tracking (non max exceeded)
-		elif ((find is False)): 
-			centroid_predicted = None
-			centroid_predicted = particleFilter.filter_steps(centroid_predicted)
+		if find is False: 
+			alvo.area = None # avoid unwanted approach
+			alvo.centerX , alvo.centerY = (centroid_predicted[0],centroid_predicted[1])
+
+			centroid_predicted = particleFilter.filter_steps(None)
+			cmd = con.movimentRules(framecpy,None)
+			
 			infos["Track"] = "Predicting"
-			if centroid_predicted is not False:
-				alvo.area = None # avoid unwanted approach
-				alvo.centerX , alvo.centerY = (centroid_predicted[0],centroid_predicted[1])
+
+		# lose tracking (max exceeded)
+		if centroid_predicted is False:
+			print("[ERROR] - chose again the object")
+			filterStarted = False
+			infos["Track"] = "Lost Tracking"
+			infos["Class"] = None
+			infos["Drone"] = None
+			continue
+		
+		particleFilter.drawBox(framecpy)
+		infos["Drone"] = cmd
 
 		# #controller
 

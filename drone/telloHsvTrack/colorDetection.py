@@ -81,10 +81,21 @@ def movimentRules(img,detection):
 	rectangleCoords = None
 	color = None
 
+	if detection is None:
+		cw = int(frameWidth/2)
+		ch = int(frameHeight/2)
+		display(img)
+		cv2.line(img, (cw-10,ch-10), (cw+10,ch+10), (0, 0, 255), 3)
+		cv2.line(img, (cw+10,ch-10), (cw-10,ch+10), (0, 0, 255), 3)
+		text = "Move commands are disabled during prediction"
+		cv2.putText(img, text , (10,frameHeight-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 0, 255), 1)
+		return None
+
 	widthPart = int((int(frameWidth/2)-xOffSet) /2)
 	(x,y,w,h,cx,cy,area) = (detection.x , detection.y , detection.w , detection.h , detection.centerX , detection.centerY , detection.area)
 
 	cmd = ""
+
 
 	if area is not None:
 		if(area < areaMin):
@@ -129,6 +140,8 @@ def movimentRules(img,detection):
 							int(frameWidth/2+xOffSet),frameHeight]
 		color = (0,153,255)
 		cmd = "Dwn"
+	else:
+		cmd = "Keep"
 
 	if cmdPrint is True:
 		cv2.putText(img, cmd , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
@@ -157,7 +170,7 @@ def display(imgCopy):
 
 	cv2.line(imgCopy,(int(frameWidth/2)-xOffSet,0),(int(frameWidth/2)-xOffSet,frameHeight),(255,255,0),3)
 	cv2.line(imgCopy,(int(frameWidth/2)+xOffSet,0),(int(frameWidth/2)+xOffSet,frameHeight),(255,255,0),3)
-	cv2.circle(imgCopy,(int(frameWidth/2),int(frameHeight/2)),5,(0,0,255),5)
+	cv2.circle(imgCopy,(int(frameWidth/2),int(frameHeight/2)),2,(0,0,255),2)
 	cv2.line(imgCopy, (0,int(frameHeight / 2) - yOffSet), (frameWidth,int(frameHeight / 2) - yOffSet), (255, 255, 0), 3)
 	cv2.line(imgCopy, (0, int(frameHeight / 2) + yOffSet), (frameWidth, int(frameHeight / 2) + yOffSet), (255, 255, 0), 3)
 
