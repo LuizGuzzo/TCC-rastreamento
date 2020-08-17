@@ -76,37 +76,30 @@ def movimentRules(img,detection):
 
 	frameHeight = img.shape[0]
 	frameWidth = img.shape[1]
+	cw = int(frameWidth/2)
+	ch = int(frameHeight/2)
 
 	overlay = img.copy()
 	rectangleCoords = None
 	color = None
+	cmd = ""
 
 	if detection is None:
-		cw = int(frameWidth/2)
-		ch = int(frameHeight/2)
 		display(img)
 		cv2.line(img, (cw-10,ch-10), (cw+10,ch+10), (0, 0, 255), 3)
 		cv2.line(img, (cw+10,ch-10), (cw-10,ch+10), (0, 0, 255), 3)
 		text = "Move commands are disabled during prediction"
 		cv2.putText(img, text , (10,frameHeight-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 0, 255), 1)
-		return None
+		return cmd,0
 
 	widthPart = int((int(frameWidth/2)-xOffSet) /2)
 	(x,y,w,h,cx,cy,area) = (detection.x , detection.y , detection.w , detection.h , detection.centerX , detection.centerY , detection.area)
 
-	cmd = ""
+	centroid = np.array((cx,cy))
+	centerImage = np.array((cw,ch))
+	dist = np.linalg.norm(centroid-centerImage)
 
-
-	if area is not None:
-		if(area < areaMin):
-			rectangleCoords = [x,y,x+w,y+h]
-			color = (255,0,0)
-			cmd = "Fwd"
-		elif(area > areaMax):
-			rectangleCoords = [x,y,x+w,y+h]
-			color = (0,0,255)
-			cmd = "Bwd"
-
+	
 	if (cx < int(frameWidth/2)-xOffSet):
 		if (cx < widthPart):
 			rectangleCoords = 	[0,int(frameHeight/2-yOffSet),
@@ -142,9 +135,20 @@ def movimentRules(img,detection):
 		cmd = "Dwn"
 	else:
 		cmd = "Keep"
+		if area is not None:
+			if(area < areaMin):
+				rectangleCoords = [x,y,x+w,y+h]
+				color = (255,0,0)
+				cmd = "Fwd"
+			elif(area > areaMax):
+				rectangleCoords = [x,y,x+w,y+h]
+				color = (0,0,255)
+				cmd = "Bwd"
+		
 
 	if cmdPrint is True:
 		cv2.putText(img, cmd , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
+		cv2.putText(img, str(np.round(dist)) , (20, 80), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
 	
 	if rectangleCoords is not None:
 		cv2.rectangle(overlay,
@@ -160,7 +164,7 @@ def movimentRules(img,detection):
 
 	
 	
-	return cmd
+	return cmd,dist
  
 def display(imgCopy):
 	frameHeight = imgCopy.shape[0]
@@ -197,10 +201,10 @@ def createParamTrackers():
 def createMovRulesTrackers():
 	cv2.namedWindow("Moviment Rules")
 	cv2.resizeWindow("Moviment Rules",640,240)
-	cv2.createTrackbar("Area Min","Moviment Rules",2000,1000000, empty)
-	cv2.createTrackbar("Area Max","Moviment Rules",7000,1000000, empty)
-	cv2.createTrackbar("xOffSet","Moviment Rules",100,1080, empty)
-	cv2.createTrackbar("yOffSet","Moviment Rules",100,1080, empty)
+	cv2.createTrackbar("Area Min","Moviment Rules",4500,1000000, empty)
+	cv2.createTrackbar("Area Max","Moviment Rules",7500,1000000, empty)
+	cv2.createTrackbar("xOffSet","Moviment Rules",70,1080, empty)
+	cv2.createTrackbar("yOffSet","Moviment Rules",70,1080, empty)
 
 def main():
 
@@ -212,7 +216,7 @@ def main():
 	# CONNECT TO TELLO
 	me = Tello()
 	me.connect()
-	me.for_back_velocity = 0
+	me.forward_backward_velocity = 0
 	me.left_right_velocity = 0
 	me.up_down_velocity = 0
 	me.yaw_velocity = 0
@@ -269,8 +273,10 @@ def main():
 		detections = getObjectsHSV(imgDil, imgCopy)
 
 		cmd = ""
+		dist = 0
+		
 		for detection in detections:
-			cmd = movimentRules(imgCopy,detection)
+			cmd,dist = movimentRules(imgCopy,detection)
 			print(cmd)
 			break
 		
@@ -281,30 +287,38 @@ def main():
 			startCounter = 1
 
 		if cmd == "Fwd":
-			me.forward_back_velocity = 10
+			me.forward_backward_velocity = 20
+			me.up_down_velocity = 0; me.yaw_velocity = 0
 		elif cmd == "Bwd":
-			me.forward_back_velocity = -10
+			me.forward_backward_velocity = -20
+			me.up_down_velocity = 0; me.yaw_velocity = 0
 		elif cmd == "Lft":
-			me.left_right_velocity = -30	
+			me.yaw_velocity = -40 # me.left_right_velocity = -30
+			me.forward_backward_velocity = 0;me.up_down_velocity = 0
 		elif cmd == "!cw":
-			me.yaw_velocity = -30
+			me.yaw_velocity = -40
+			me.forward_backward_velocity = 0;me.up_down_velocity = 0
 		elif cmd == "cw":
-			me.yaw_velocity = 30
+			me.yaw_velocity = 40
+			me.forward_backward_velocity = 0;me.up_down_velocity = 0
 		elif cmd == "Rgt":
-			me.left_right_velocity = 30
+			me.yaw_velocity = 40 # me.left_right_velocity = 30
+			me.forward_backward_velocity = 0;me.up_down_velocity = 0
 		elif cmd == "Up":
-			me.up_down_velocity= 20
+			me.up_down_velocity= 30
+			me.forward_backward_velocity = 0; me.yaw_velocity = 0
 		elif cmd == "Dwn":
-			me.up_down_velocity= -20
+			me.up_down_velocity= -30
+			me.forward_backward_velocity = 0; me.yaw_velocity = 0
 		else:
-			me.left_right_velocity = 0; me.forward_back_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0
+			me.left_right_velocity = 0; me.forward_backward_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0
 
 		# SEND VELOCITY VALUES TO TELLO
 	
 		if me.send_rc_control:
-			me.send_rc_control(me.left_right_velocity, me.for_back_velocity, me.up_down_velocity, me.yaw_velocity)
+			me.send_rc_control(me.left_right_velocity, me.forward_backward_velocity, me.up_down_velocity, me.yaw_velocity)
 		
-		print(dir)
+		print("cmd: {} | dist: {}".format(cmd,dist))
 	
 		stack = stackImages(0.7,([img,result],[imgDil,imgCopy]))
 		cv2.imshow('Horizontal Stacking', stack)

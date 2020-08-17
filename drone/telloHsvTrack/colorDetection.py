@@ -76,36 +76,28 @@ def movimentRules(img,detection):
 
 	frameHeight = img.shape[0]
 	frameWidth = img.shape[1]
+	cw = int(frameWidth/2)
+	ch = int(frameHeight/2)
 
 	overlay = img.copy()
 	rectangleCoords = None
 	color = None
+	cmd = ""
 
 	if detection is None:
-		cw = int(frameWidth/2)
-		ch = int(frameHeight/2)
 		display(img)
 		cv2.line(img, (cw-10,ch-10), (cw+10,ch+10), (0, 0, 255), 3)
 		cv2.line(img, (cw+10,ch-10), (cw-10,ch+10), (0, 0, 255), 3)
 		text = "Move commands are disabled during prediction"
 		cv2.putText(img, text , (10,frameHeight-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 0, 255), 1)
-		return None
+		return cmd,0
 
 	widthPart = int((int(frameWidth/2)-xOffSet) /2)
 	(x,y,w,h,cx,cy,area) = (detection.x , detection.y , detection.w , detection.h , detection.centerX , detection.centerY , detection.area)
 
-	cmd = ""
-
-
-	if area is not None:
-		if(area < areaMin):
-			rectangleCoords = [x,y,x+w,y+h]
-			color = (255,0,0)
-			cmd = "Fwd"
-		elif(area > areaMax):
-			rectangleCoords = [x,y,x+w,y+h]
-			color = (0,0,255)
-			cmd = "Bwd"
+	centroid = np.array((cx,cy))
+	centerImage = np.array((cw,ch))
+	dist = np.linalg.norm(centroid-centerImage)
 
 	if (cx < int(frameWidth/2)-xOffSet):
 		if (cx < widthPart):
@@ -142,9 +134,21 @@ def movimentRules(img,detection):
 		cmd = "Dwn"
 	else:
 		cmd = "Keep"
+		
+	if area is not None:
+		if(area < areaMin):
+			rectangleCoords = [x,y,x+w,y+h]
+			color = (255,0,0)
+			cmd = "Fwd"
+		elif(area > areaMax):
+			rectangleCoords = [x,y,x+w,y+h]
+			color = (0,0,255)
+			cmd = "Bwd"
+
 
 	if cmdPrint is True:
 		cv2.putText(img, cmd , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
+		cv2.putText(img, str(np.round(dist)) , (20, 80), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
 	
 	if rectangleCoords is not None:
 		cv2.rectangle(overlay,
@@ -160,7 +164,7 @@ def movimentRules(img,detection):
 
 	
 	
-	return cmd
+	return cmd,dist
  
 def display(imgCopy):
 	frameHeight = imgCopy.shape[0]
@@ -192,7 +196,7 @@ def createParamTrackers():
 	cv2.resizeWindow("Parameters",640,240)
 	cv2.createTrackbar("Threshold1","Parameters",0,255,empty)
 	cv2.createTrackbar("Threshold2","Parameters",94,255,empty)
-	cv2.createTrackbar("MinArea","Parameters",848,30000,empty)
+	cv2.createTrackbar("MinArea","Parameters",2000,30000,empty)
 
 def createMovRulesTrackers():
 	cv2.namedWindow("Moviment Rules")
@@ -204,7 +208,7 @@ def createMovRulesTrackers():
 
 def main():
 
-	cap = cv2.VideoCapture(0)
+	cap = cv2.VideoCapture(2)
 
 	createHsvTrackers()
 	createParamTrackers()
@@ -240,8 +244,8 @@ def main():
 		detections = getObjectsHSV(imgDil, imgCopy)
 
 		for detection in detections:
-			cmd = movimentRules(imgCopy,detection)
-			print(cmd)
+			cmd,dist = movimentRules(imgCopy,detection)
+			print("cmd: {} | dist: {}".format(cmd,dist))
 		
 		
 		# display(imgCopy)
