@@ -34,9 +34,39 @@ def stackImages(scale,imgArray):
 	return ver
  
 
-def getObjectsHSV(img,imgCopy):
+def getObjectsHSV(img):
+
+	stack = []
+	stack.append(img)
+
+	imgHsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+	
+	h_min = cv2.getTrackbarPos("HUE Min","HSV")
+	h_max = cv2.getTrackbarPos("HUE Max", "HSV")
+	s_min = cv2.getTrackbarPos("SAT Min", "HSV")
+	s_max = cv2.getTrackbarPos("SAT Max", "HSV")
+	v_min = cv2.getTrackbarPos("VALUE Min", "HSV")
+	v_max = cv2.getTrackbarPos("VALUE Max", "HSV")
+
+	lower = np.array([h_min,s_min,v_min])
+	upper = np.array([h_max,s_max,v_max])
+	mask = cv2.inRange(imgHsv,lower,upper)
+
+	result = cv2.bitwise_and(img,img, mask = mask)
+	stack.append(result)
+
+	# mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+
+	imgBlur = cv2.GaussianBlur(result, (7, 7), 1)
+	imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
+	threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
+	threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
+	imgCanny = cv2.Canny(imgGray, threshold1, threshold2)
+	kernel = np.ones((5, 5))
+	imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
+	stack.append(imgDil)
  
-	contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+	contours, hierarchy = cv2.findContours(imgDil, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 	areaMinDetect = cv2.getTrackbarPos("MinArea", "Parameters")
 
 	detections = []
@@ -49,26 +79,34 @@ def getObjectsHSV(img,imgCopy):
 				
 		
 		if area > areaMinDetect:
-
-			cv2.drawContours(imgCopy, cnt, -1, (255, 0, 255), 7)
-			cv2.rectangle(imgCopy, (x , y ), (x + w , y + h ), (0, 255, 0), 5)
+			cv2.drawContours(img, cnt, -1, (255, 0, 255), 7)
+			cv2.rectangle(img, (x , y ), (x + w , y + h ), (0, 255, 0), 5)
  
-			cv2.putText(imgCopy, "Points: " + str(len(approx)), (x + w + 20, y + 20), cv2.FONT_HERSHEY_COMPLEX, .7,
+			cv2.putText(img, "Points: " + str(len(approx)), (x + w + 20, y + 20), cv2.FONT_HERSHEY_COMPLEX, .7,
 						(0, 255, 0), 2)
-			cv2.putText(imgCopy, "Area: " + str(int(area)), (x + w + 20, y + 45), cv2.FONT_HERSHEY_COMPLEX, 0.7,
+			cv2.putText(img, "Area: " + str(int(area)), (x + w + 20, y + 45), cv2.FONT_HERSHEY_COMPLEX, 0.7,
 						(0, 255, 0), 2)
-			cv2.putText(imgCopy, " " + str(int(x))+ " "+str(int(y)), (x - 20, y- 45), cv2.FONT_HERSHEY_COMPLEX, 0.7,
+			cv2.putText(img, " " + str(int(x))+ " "+str(int(y)), (x - 20, y- 45), cv2.FONT_HERSHEY_COMPLEX, 0.7,
 						(0, 255, 0), 2)
+			cv2.circle(img, (int(x+w/2), int(y+h/2)), 3, (0,255,0), -1)
 			
+			#x,y,w,h,idx,color,category,confidence
 			detection = det.detection(x,y,w,h,0,(0,0,0),"target",1)
-			
 			detections.append(detection)
 	
-	return detections
+	detection = None
+	for i in detections:
+		detection = i
+		break
+	
+	stack.append(img)
+
+	return detection,stack
 
 
 def movimentRules(img,detection):
-	
+	display(img)
+
 	areaMin = cv2.getTrackbarPos("Area Min","Moviment Rules")
 	areaMax = cv2.getTrackbarPos("Area Max","Moviment Rules")
 	xOffSet = cv2.getTrackbarPos("xOffSet","Moviment Rules")
@@ -90,15 +128,12 @@ def movimentRules(img,detection):
 		cv2.line(img, (cw+10,ch-10), (cw-10,ch+10), (0, 0, 255), 3)
 		text = "Move commands are disabled during prediction"
 		cv2.putText(img, text , (10,frameHeight-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 0, 255), 1)
-		return cmd,0
+		return cmd,img
 
 	widthPart = int((int(frameWidth/2)-xOffSet) /2)
 	(x,y,w,h,cx,cy,area) = (detection.x , detection.y , detection.w , detection.h , detection.centerX , detection.centerY , detection.area)
-
-	centroid = np.array((cx,cy))
-	centerImage = np.array((cw,ch))
-	dist = np.linalg.norm(centroid-centerImage)
-
+	
+	
 	if (cx < int(frameWidth/2)-xOffSet):
 		if (cx < widthPart):
 			rectangleCoords = 	[0,int(frameHeight/2-yOffSet),
@@ -148,7 +183,6 @@ def movimentRules(img,detection):
 
 	if cmdPrint is True:
 		cv2.putText(img, cmd , (20, 50), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
-		cv2.putText(img, str(np.round(dist)) , (20, 80), cv2.FONT_HERSHEY_COMPLEX,1,(0, 0, 255), 3)
 	
 	if rectangleCoords is not None:
 		cv2.rectangle(overlay,
@@ -158,13 +192,10 @@ def movimentRules(img,detection):
 		alpha = 0.4
 		cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0,img)
 		
-
 	display(img)
 	cv2.line(img, (int(frameWidth/2),int(frameHeight/2)), (cx,cy), (0, 0, 255), 3)
 
-	
-	
-	return cmd,dist
+	return cmd,img
  
 def display(imgCopy):
 	frameHeight = imgCopy.shape[0]
@@ -196,7 +227,7 @@ def createParamTrackers():
 	cv2.resizeWindow("Parameters",640,240)
 	cv2.createTrackbar("Threshold1","Parameters",0,255,empty)
 	cv2.createTrackbar("Threshold2","Parameters",94,255,empty)
-	cv2.createTrackbar("MinArea","Parameters",2000,30000,empty)
+	cv2.createTrackbar("MinArea","Parameters",7000,30000,empty)
 
 def createMovRulesTrackers():
 	cv2.namedWindow("Moviment Rules")
@@ -218,41 +249,18 @@ def main():
 	
 		_, img = cap.read()
 		imgCopy = img.copy()
-		imgHsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-	
-		h_min = cv2.getTrackbarPos("HUE Min","HSV")
-		h_max = cv2.getTrackbarPos("HUE Max", "HSV")
-		s_min = cv2.getTrackbarPos("SAT Min", "HSV")
-		s_max = cv2.getTrackbarPos("SAT Max", "HSV")
-		v_min = cv2.getTrackbarPos("VALUE Min", "HSV")
-		v_max = cv2.getTrackbarPos("VALUE Max", "HSV")
-	
-		lower = np.array([h_min,s_min,v_min])
-		upper = np.array([h_max,s_max,v_max])
-		mask = cv2.inRange(imgHsv,lower,upper)
-		result = cv2.bitwise_and(img,img, mask = mask)
-		mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-	
-		imgBlur = cv2.GaussianBlur(result, (7, 7), 1)
-		imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
-		threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
-		threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
-		imgCanny = cv2.Canny(imgGray, threshold1, threshold2)
-		kernel = np.ones((5, 5))
-		imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
 
-		detections = getObjectsHSV(imgDil, imgCopy)
+		detection,stack = getObjectsHSV(imgCopy)
+		imgCopy = stack[3]
+		
+		stackHSV = stackImages(0.7,(stack.copy()))
+		
 
-		for detection in detections:
-			cmd,dist = movimentRules(imgCopy,detection)
-			print("cmd: {} | dist: {}".format(cmd,dist))
-		
-		
-		# display(imgCopy)
-	
-		stack = stackImages(0.7,([img,result],[imgDil,imgCopy]))
-	
-		cv2.imshow('Horizontal Stacking', stack)
+		cmd,imgCopy = movimentRules(imgCopy,detection)
+		print("cmd: ",cmd)
+
+		cv2.imshow('Horizontal Stacking', stackHSV)
+		cv2.imshow("moviment Result",imgCopy)
 
 		if cv2.waitKey(1) & 0xFF == ord('q'):
 			break
