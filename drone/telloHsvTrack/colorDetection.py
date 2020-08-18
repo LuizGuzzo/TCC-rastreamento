@@ -55,8 +55,6 @@ def getObjectsHSV(img):
 	result = cv2.bitwise_and(img,img, mask = mask)
 	stack.append(result)
 
-	# mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-
 	imgBlur = cv2.GaussianBlur(result, (7, 7), 1)
 	imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
 	threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
@@ -69,7 +67,7 @@ def getObjectsHSV(img):
 	contours, hierarchy = cv2.findContours(imgDil, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 	areaMinDetect = cv2.getTrackbarPos("MinArea", "Parameters")
 
-	detections = []
+	detection = None
 
 	for cnt in contours:
 		peri = cv2.arcLength(cnt, True)
@@ -79,6 +77,8 @@ def getObjectsHSV(img):
 				
 		
 		if area > areaMinDetect:
+			areaMinDetect = area
+			
 			cv2.drawContours(img, cnt, -1, (255, 0, 255), 7)
 			cv2.rectangle(img, (x , y ), (x + w , y + h ), (0, 255, 0), 5)
  
@@ -92,13 +92,8 @@ def getObjectsHSV(img):
 			
 			#x,y,w,h,idx,color,category,confidence
 			detection = det.detection(x,y,w,h,0,(0,0,0),"target",1)
-			detections.append(detection)
 	
-	detection = None
-	for i in detections:
-		detection = i
-		break
-	
+
 	stack.append(img)
 
 	return detection,stack
@@ -169,8 +164,9 @@ def movimentRules(img,detection):
 		cmd = "Dwn"
 	else:
 		cmd = "Keep"
-		
-	if area is not None:
+
+	#TODO: preciso fazer o mesmo esquema com altura		
+	if (area is not None) and ("Rgt" not in cmd) and ("Lft" not in cmd):
 		if(area < areaMin):
 			rectangleCoords = [x,y,x+w,y+h]
 			color = (255,0,0)
@@ -227,16 +223,15 @@ def createParamTrackers():
 	cv2.resizeWindow("Parameters",640,240)
 	cv2.createTrackbar("Threshold1","Parameters",0,255,empty)
 	cv2.createTrackbar("Threshold2","Parameters",94,255,empty)
-	cv2.createTrackbar("MinArea","Parameters",7000,30000,empty)
+	cv2.createTrackbar("MinArea","Parameters",2000,30000,empty)
 
 def createMovRulesTrackers():
 	cv2.namedWindow("Moviment Rules")
 	cv2.resizeWindow("Moviment Rules",640,240)
-	cv2.createTrackbar("Area Min","Moviment Rules",0,1000000, empty)
-	cv2.createTrackbar("Area Max","Moviment Rules",1000000,1000000, empty)
-	cv2.createTrackbar("xOffSet","Moviment Rules",100,1080, empty)
-	cv2.createTrackbar("yOffSet","Moviment Rules",100,1080, empty)
-
+	cv2.createTrackbar("Area Min","Moviment Rules",4500,1000000, empty)
+	cv2.createTrackbar("Area Max","Moviment Rules",7500,1000000, empty)
+	cv2.createTrackbar("xOffSet","Moviment Rules",70,1080, empty)
+	cv2.createTrackbar("yOffSet","Moviment Rules",70,1080, empty)
 def main():
 
 	cap = cv2.VideoCapture(2)
@@ -275,5 +270,6 @@ if __name__ == '__main__':
 	cmdPrint = True
 	main()
 else:
-	import drone.telloHsvTrack.detection as det
+	import detection as det
+	# import drone.telloHsvTrack.detection as det
 	cmdPrint = False
