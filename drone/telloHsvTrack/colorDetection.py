@@ -126,47 +126,34 @@ def movimentRules(img,detection):
 		return cmd,img
 
 	widthPart = int((int(frameWidth/2)-xOffSet) /2)
+	heightPart = int((int(frameHeight/2)-yOffSet)/2)
 	(x,y,w,h,cx,cy,area) = (detection.x , detection.y , detection.w , detection.h , detection.centerX , detection.centerY , detection.area)
 	
-	
-	if (cx < int(frameWidth/2)-xOffSet):
-		if (cx < widthPart):
-			rectangleCoords = 	[0,int(frameHeight/2-yOffSet),
-								widthPart, int(frameHeight/2)+yOffSet]
-			color = (0,153,255)
-			cmd = "Lft"
-		else:
-			rectangleCoords = 	[widthPart,int(frameHeight/2-yOffSet),
-								int(frameWidth/2)-xOffSet, int(frameHeight/2)+yOffSet]
-			color = (0,153,255)
-			cmd = "!cw"
-	elif (cx > int(frameWidth/2)+xOffSet):
-		if (cx < frameWidth-widthPart):
-			rectangleCoords = 	[int(frameWidth/2)+xOffSet, int(frameHeight/2-yOffSet),
-								frameWidth-widthPart,int(frameHeight/2)+yOffSet]
-			color = (0,153,255)
-			cmd = "cw"
-		else:
-			rectangleCoords = 	[frameWidth-widthPart, int(frameHeight/2-yOffSet),
-								frameWidth,int(frameHeight/2)+yOffSet]
-			color = (0,153,255)
-			cmd = "Rgt"
-			
-	elif (cy < int(frameHeight / 2) - yOffSet):
-		rectangleCoords = 	[int(frameWidth/2-xOffSet),0,
-							int(frameWidth/2+xOffSet),int(frameHeight/2)-yOffSet]
-		color = (0,153,255)
-		cmd = "Up"
-	elif (cy > int(frameHeight / 2) + yOffSet):
-		rectangleCoords = 	[int(frameWidth/2-xOffSet),int(frameHeight/2)+yOffSet,
-							int(frameWidth/2+xOffSet),frameHeight]
-		color = (0,153,255)
-		cmd = "Dwn"
-	else:
-		cmd = "Keep"
+	color = (0,153,255)
+	cmd = "Keep"
 
-	#TODO: preciso fazer o mesmo esquema com altura		
-	if (area is not None) and ("Rgt" not in cmd) and ("Lft" not in cmd):
+	#Prioridade 5
+	if(cy < int(frameHeight/2)-yOffSet):
+		rectangleCoords = 	[int(frameWidth/2-xOffSet),heightPart,
+								int(frameWidth/2+xOffSet),int(frameHeight/2)-yOffSet]
+		cmd = "Up"
+	if(cy > int(frameHeight/2)+yOffSet):
+		rectangleCoords = 	[int(frameWidth/2-xOffSet),int(frameHeight/2)+yOffSet,
+								int(frameWidth/2+xOffSet),frameHeight - heightPart]
+		cmd = "Dwn"
+
+	#Prioridade 4
+	if(cx < int(frameWidth/2)-xOffSet):
+		rectangleCoords = 	[widthPart,heightPart,
+								int(frameWidth/2)-xOffSet, frameHeight-heightPart]
+		cmd = "!cw"
+	if(cx > int(frameWidth/2)+xOffSet):
+		rectangleCoords = 	[int(frameWidth/2)+xOffSet, heightPart,
+								frameWidth-widthPart,frameHeight-heightPart]
+		cmd = "cw"
+
+	#Prioridade 3
+	if (area is not None):
 		if(area < areaMin):
 			rectangleCoords = [x,y,x+w,y+h]
 			color = (255,0,0)
@@ -175,6 +162,30 @@ def movimentRules(img,detection):
 			rectangleCoords = [x,y,x+w,y+h]
 			color = (0,0,255)
 			cmd = "Bwd"
+
+	#Prioridade 2
+	if(cy < heightPart):
+		rectangleCoords = 	[widthPart,0,
+								frameWidth-widthPart,heightPart]
+		color = (0,153,255)
+		cmd = "Up+"
+	if(cy > frameHeight-heightPart):
+		rectangleCoords = 	[widthPart,frameHeight - heightPart,
+								frameWidth-widthPart,frameHeight]
+		color = (0,153,255)
+		cmd = "Dwn+"
+
+	#Prioridade 1
+	if(cx < widthPart):
+		rectangleCoords = 	[0,0,
+								widthPart, frameHeight]
+		color = (0,153,255)
+		cmd = "Lft"
+	if(cx > frameWidth-widthPart):
+		rectangleCoords = 	[frameWidth-widthPart,0,
+								frameWidth,frameHeight]
+		color = (0,153,255)
+		cmd = "Rgt"
 
 
 	if cmdPrint is True:
