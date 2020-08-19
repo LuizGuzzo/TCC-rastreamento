@@ -88,6 +88,12 @@ def main():
 			elif cmd == "Dwn":
 				me.up_down_velocity= -30
 				me.forward_backward_velocity = 0; me.yaw_velocity = 0
+			elif cmd == "Up+":
+				me.up_down_velocity= 50
+				me.forward_backward_velocity = 0; me.yaw_velocity = 0
+			elif cmd == "Dwn+":
+				me.up_down_velocity= -50
+				me.forward_backward_velocity = 0; me.yaw_velocity = 0
 			else:
 				me.left_right_velocity = 0; me.forward_backward_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0
 
@@ -111,6 +117,14 @@ def main():
 	
 
 if __name__ == '__main__':
+	import argparse
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-f", "--flight", default = False)
+	args = vars(ap.parse_args())
 
-	FLIGHT = False
+	if args["flight"] is False:
+		FLIGHT = False
+	else:
+		FLIGHT = True
+	
 	main()
