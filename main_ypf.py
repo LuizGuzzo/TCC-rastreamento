@@ -12,7 +12,7 @@ import os
 from djitellopy import Tello
 import particle_filter.pf_tools as pf
 import yolo.yolOO as yoo
-import drone.telloHsvTrack.colorDetection as con
+import drone.telloHsvTrack.telloController as con
 from centroidtracker import CentroidTracker
 
 # construct the argument parse and parse the arguments
@@ -34,24 +34,31 @@ def getMousePosition(event,x,y,flags,param):
     if event == cv2.EVENT_LBUTTONDBLCLK:
         mouse = (x,y)
 	
-def display(img):
+def CNN_FP_info():
+	cv2.namedWindow("CNN_FP_Info")
 	y = 20
 	size = len(infos)
-	cv2.rectangle(img,(0,0),(200,size*y+5 ),(255,255,255),cv2.FILLED)
+	img = 200 * np.ones((size*y+5,200,3), np.uint8)
+	cv2.rectangle(img,(0,0),(200,size*y+5),(0,0,0),2)
+
+	# TODO: alterar as infos para carregarem [key: []]
+
 	for key,value in infos.items():
 		cv2.putText(img,
 			key+": "+str(value),
 			(10, y), cv2.FONT_HERSHEY_PLAIN,1,(255,119,0), 2)
+		cv2.line(img,(0,y+5),(200,y+5),(0,0,0),1)
 		y += 20
 
-global infos
+	cv2.imshow("CNN_FP_Info",img)
 
-vs = cv2.VideoCapture(args["input"])
+
+cap = cv2.VideoCapture(args["input"])
 
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
 		else cv2.CAP_PROP_FRAME_COUNT
-	total = int(vs.get(prop))
+	total = int(cap.get(prop))
 	print("[INFO] {} total frames in video".format(total))
 
 except:
@@ -62,6 +69,8 @@ except:
 writer = None
 mouse = None
 filterStarted = False
+
+global infos
 infos = {
 	"System Status":"",
 	"FPS": 0,
@@ -92,7 +101,7 @@ infos = {
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
 
 while True:
-	(grabbed, frame) = vs.read()
+	(grabbed, frame) = cap.read()
 	framecpy = frame.copy()
 
 
@@ -247,7 +256,7 @@ while True:
 
 	infos["FPS"] = fps
 
-	display(framecpy)
+	CNN_FP_info()
 
 	# print("FPS: {}".format(str(round(fps, 2))))
 	cv2.imshow("output",framecpy)
@@ -272,4 +281,4 @@ while True:
 # release the file pointers
 print("[INFO] cleaning up...")
 writer.release()
-vs.release()
+cap.release()

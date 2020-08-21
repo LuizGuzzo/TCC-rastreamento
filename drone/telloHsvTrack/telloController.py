@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+from djitellopy import Tello
+import sys
 global cmdPrint
 
 def stackImages(scale,imgArray):
@@ -98,6 +100,9 @@ def getObjectsHSV(img):
 
 	return detection,stack
 
+# class simpleTello():
+# 	def __init__():
+		
 
 def movimentRules(img,detection):
 	display(img)
@@ -216,6 +221,52 @@ def display(imgCopy):
 	cv2.line(imgCopy, (0,int(frameHeight / 2) - yOffSet), (frameWidth,int(frameHeight / 2) - yOffSet), (255, 255, 0), 3)
 	cv2.line(imgCopy, (0, int(frameHeight / 2) + yOffSet), (frameWidth, int(frameHeight / 2) + yOffSet), (255, 255, 0), 3)
 
+def droneInfo(drone):
+	cv2.namedWindow("infoDrone")
+	img = 255 * np.ones((240,350,3), np.uint8)
+
+	battery = drone.get_battery()
+	temperature = drone.get_temperature()
+	ToF = drone.get_distance_tof()
+	wifiSignal = drone.query_wifi_signal_noise_ratio()
+	flightTime = drone.get_flight_time()
+
+	texts = []
+	color = (51,204,51)
+	if(int(battery) <= 50):
+		color = (51,153,255)
+	texts.append(["Battery: {}%".format(str(battery)),color])
+
+	color = (51,204,51)
+	if(temperature >= 90):
+		color = (51,153,255)
+	texts.append(["Temperature: {} C".format(str(temperature)),color])
+
+	color = (51,204,51)
+	if(height >= 200):
+		color = (51,153,255)
+	texts.append(["ToF: {}".format(str(ToF)),color])
+
+	color = (51,204,51)
+	if(wifiSignal <= 60):
+		color = (51,153,255)
+	texts.append(["Wifi-Signal: {}".format(str(wifiSignal)),color])
+
+	color = (51,204,51)
+	if(wifiSignal <= 120):
+		color = (51,153,255)
+	texts.append(["Flight Time: {}".format(str(flightTime)),color])
+	
+	
+
+	height = 30
+	for line in texts:
+		cv2.putText(img, line[0] , (10,height), cv2.FONT_HERSHEY_DUPLEX,1,line[1], )
+		height += 30
+	
+	cv2.imshow("infoDrone",img)
+
+
 def empty(a):
 	pass
 
@@ -234,7 +285,7 @@ def createParamTrackers():
 	cv2.resizeWindow("Parameters",640,240)
 	cv2.createTrackbar("Threshold1","Parameters",0,255,empty)
 	cv2.createTrackbar("Threshold2","Parameters",94,255,empty)
-	cv2.createTrackbar("MinArea","Parameters",2000,30000,empty)
+	cv2.createTrackbar("MinArea","Parameters",1000,30000,empty)
 
 def createMovRulesTrackers():
 	cv2.namedWindow("Moviment Rules")
@@ -243,17 +294,49 @@ def createMovRulesTrackers():
 	cv2.createTrackbar("Area Max","Moviment Rules",7500,1000000, empty)
 	cv2.createTrackbar("xOffSet","Moviment Rules",70,1080, empty)
 	cv2.createTrackbar("yOffSet","Moviment Rules",70,1080, empty)
+
 def main():
-
-	cap = cv2.VideoCapture(2)
-
 	createHsvTrackers()
 	createParamTrackers()
 	createMovRulesTrackers()	
 
-	while True:
+	width = 640  # WIDTH OF THE IMAGE
+	height = 480  # HEIGHT OF THE IMAGE
 	
-		_, img = cap.read()
+	
+	if FLIGHT:
+		me = Tello()
+		me.connect()
+		me.forward_backward_velocity = 0
+		me.left_right_velocity = 0
+		me.up_down_velocity = 0
+		me.yaw_velocity = 0
+		me.speed = 0
+		
+		startCounter =0
+		
+		battery = me.get_battery()
+		if battery <= 15:
+			print("[ERROR] - battery under 15% ")
+			sys.exit(0)
+		
+		me.streamoff()
+		me.streamon()
+
+	else:
+		cap = cv2.VideoCapture(2)
+	
+	
+
+	while True:
+		# GET THE IMAGE FROM TELLO
+		if FLIGHT:
+			frame_read = me.get_frame_read()
+			myFrame = frame_read.frame
+			img = cv2.resize(myFrame, (width, height))
+		else:
+			_, img = cap.read()
+
 		imgCopy = img.copy()
 
 		detection,stack = getObjectsHSV(imgCopy)
@@ -264,23 +347,88 @@ def main():
 
 		cmd,imgCopy = movimentRules(imgCopy,detection)
 		print("cmd: ",cmd)
+		
+		################# FLIGHT
+		if FLIGHT:
+			if startCounter == 0:
+				# me.takeoff()
+				startCounter = 1
+
+			droneInfo(me)
+
+			if cmd == "Fwd":
+				me.forward_backward_velocity = 20
+				me.up_down_velocity = 0; me.yaw_velocity = 0
+			elif cmd == "Bwd":
+				me.forward_backward_velocity = -20
+				me.up_down_velocity = 0; me.yaw_velocity = 0
+			elif cmd == "Lft":
+				me.yaw_velocity = -70 # me.left_right_velocity = -30
+				me.forward_backward_velocity = 0;me.up_down_velocity = 0
+			elif cmd == "!cw":
+				me.yaw_velocity = -40
+				me.forward_backward_velocity = 0;me.up_down_velocity = 0
+			elif cmd == "cw":
+				me.yaw_velocity = 40
+				me.forward_backward_velocity = 0;me.up_down_velocity = 0
+			elif cmd == "Rgt":
+				me.yaw_velocity = 70 # me.left_right_velocity = 30
+				me.forward_backward_velocity = 0;me.up_down_velocity = 0
+			elif cmd == "Up":
+				me.up_down_velocity= 30
+				me.forward_backward_velocity = 0; me.yaw_velocity = 0
+			elif cmd == "Dwn":
+				me.up_down_velocity= -30
+				me.forward_backward_velocity = 0; me.yaw_velocity = 0
+			elif cmd == "Up+":
+				me.up_down_velocity= 50
+				me.forward_backward_velocity = 0; me.yaw_velocity = 0
+			elif cmd == "Dwn+":
+				me.up_down_velocity= -50
+				me.forward_backward_velocity = 0; me.yaw_velocity = 0
+			else:
+				me.left_right_velocity = 0; me.forward_backward_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0
+
+			# SEND VELOCITY VALUES TO TELLO
+		
+			if me.send_rc_control:
+				me.send_rc_control(me.left_right_velocity, me.forward_backward_velocity, me.up_down_velocity, me.yaw_velocity)
+		####################
 
 		cv2.imshow('Horizontal Stacking', stackHSV)
 		cv2.imshow("moviment Result",imgCopy)
 
 		if cv2.waitKey(1) & 0xFF == ord('q'):
+			if FLIGHT: 
+				me.land()
+				me.streamoff()
+			else:
+				cap.release()
 			break
-	
-	cap.release()
-	cv2.destroyAllWindows()
 
+	cv2.destroyAllWindows()
 	
 
 if __name__ == '__main__':
 	import detection as det
+	import argparse
+
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-f", "--flight", default = '0')
+	args = vars(ap.parse_args())
+
+	if args["flight"] == '0':
+		FLIGHT = False
+	else:
+		FLIGHT = True
+
 	cmdPrint = True
+
 	main()
 else:
-	import detection as det
-	# import drone.telloHsvTrack.detection as det
+	# import detection as det
+	import drone.telloHsvTrack.detection as det
 	cmdPrint = False
+
+	
+	
