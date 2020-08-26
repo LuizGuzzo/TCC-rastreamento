@@ -21,7 +21,7 @@ def getMousePosition(event,x,y,flags,param):
     if event == cv2.EVENT_LBUTTONDBLCLK:
         mouse = (x,y)
 	
-def CNN_FP_info():
+def show_CNN_FP_info():
 	cv2.namedWindow("CNN_FP_Info")
 	y = 20
 	size = len(infos)
@@ -32,17 +32,18 @@ def CNN_FP_info():
 
 	for key,value in infos.items():
 		cv2.putText(img,
-			key+": "+str(value),
-			(10, y), cv2.FONT_HERSHEY_PLAIN,1,(255,119,0), 2)
+			key+": "+str(value[0]),
+			(10, y), cv2.FONT_HERSHEY_PLAIN,1,value[1], 2)
 		cv2.line(img,(0,y+5),(200,y+5),(0,0,0),1)
 		y += 20
 
 	cv2.imshow("CNN_FP_Info",img)
+	cv2.moveWindow('CNN_FP_Info',2000,200)
 
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--input", default = 1,	help="path to input video")
+ap.add_argument("-i", "--input", default = 2,	help="path to input video")
 ap.add_argument("-o", "--output", default = 'inout/test.avi',	help="path to output video")
 ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco-tiny',	help="base path to YOLO directory")
 ap.add_argument("-c", "--confidence", type=float, default=0.4,	help="minimum probability to filter weak detections")
@@ -75,23 +76,23 @@ writer = None
 mouse = None
 targetAcquired = False
 
-global infos
-infos = {
-	"System Status":"",
-	"FPS": 0,
-	"Drone": None,
-	"Track": None,
-	"Class": None,
-}
-
 # global infos
 # infos = {
-# 	"System Status":["",(255,0,0)],
-# 	"FPS": ["0",(255,0,0)],
-# 	"Drone": ["None",(255,0,0)],
-# 	"Track": ["None",(255,0,0)],
-# 	"Class": ["None",(255,0,0)],
+# 	"System Status":"",
+# 	"FPS": 0,
+# 	"Drone": None,
+# 	"Track": None,
+# 	"Class": None,
 # }
+
+global infos
+infos = {
+	"System Status":["",(255,119,0)],
+	"FPS": ["0",(255,119,0)],
+	"Drone": ["None",(255,119,0)],
+	"Track": ["None",(255,119,0)],
+	"Class": ["None",(255,119,0)],
+}
 
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
@@ -142,7 +143,7 @@ while True:
 					sTello.takeoffSearching(False)
 
 				multiTracker = CentroidTracker(args["maxframelost"])
-				infos["Class"] = alvo.category
+				infos["Class"] = [str(alvo.category),(255,119,0)]
 
 				objectsSameClass = []
 				for (i,obj) in enumerate(objects_array):
@@ -199,7 +200,7 @@ while True:
 
 			alvo.set_color((0,255,0))
 			alvo.draw(framecpy) # draw the target
-			infos["Track"] = "Tracking"		
+			infos["Track"] = ["Tracking",(0,255,0)]
 
 		# lose tracking (non max exceeded)
 		if find is False: 
@@ -209,19 +210,19 @@ while True:
 			centroid_predicted = particleFilter.filter_steps(None)
 			cmd,framecpy = imt.movimentRules(framecpy,None)
 			
-			infos["Track"] = "Predicting"
+			infos["Track"] = ["Predicting",(51,153,255)]
 
 		# lose tracking (max exceeded)
 		if centroid_predicted is False:
 			print("[ERROR] - chose again the object")
 			targetAcquired = False
-			infos["Track"] = "Lost Tracking"
-			infos["Class"] = None
-			infos["Drone"] = None
+			infos["Track"] = ["Lost Tracking",(0,0,255)]
+			infos["Class"] = ["None",(0,0,255)]
+			infos["Drone"] = ["None",(255,119,0)]
 			continue
 		
 		particleFilter.drawBox(framecpy)
-		infos["Drone"] = cmd
+		infos["Drone"] = [cmd,(255,119,0)]
 
 		if FLIGHT:
 			sTello.setCommand(cmd)
@@ -232,11 +233,13 @@ while True:
 	elap = (end - start)
 	fps = round(1/elap,2)
 
-	infos["FPS"] = fps
+	infos["FPS"] = [str(fps),(255,119,0)]
 
-	CNN_FP_info()
+	show_CNN_FP_info()
+	if FLIGHT:	sTello.showDroneInfo()
 
 	cv2.imshow("output",framecpy)
+	cv2.moveWindow('output',2370,200)
 
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
@@ -258,7 +261,8 @@ while True:
 # release the file pointers
 print("[INFO] cleaning up...")
 writer.release()
-cap.release()
 if FLIGHT: 
 	print("[INFO] - Drone is Landing")
 	sTello.off()
+else:
+	cap.release()

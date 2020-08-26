@@ -54,7 +54,6 @@ class simpleTello():
 	def setCommand(self,cmd):
 		me = self.me
 
-		self.droneInfo()
 		me.left_right_velocity = 0; me.forward_backward_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0
 
 		if cmd == "Fwd":
@@ -82,12 +81,10 @@ class simpleTello():
 	
 		if me.send_rc_control:
 			me.send_rc_control(me.left_right_velocity, me.forward_backward_velocity, me.up_down_velocity, me.yaw_velocity)
-
-	def droneInfo(self): 
+	
+	def showDroneInfo(self): 
 
 		drone = self.me
-		cv2.namedWindow("infoDrone")
-		img = 255 * np.ones((240,350,3), np.uint8)
 
 		battery = drone.get_battery()
 		temperature = drone.get_temperature()
@@ -96,39 +93,46 @@ class simpleTello():
 		flightTime = drone.get_flight_time()
 
 		texts = []
-		color = (51,204,51)
+		color = (255,119,0)
 		if(int(battery) <= 50):
 			color = (51,153,255)
+		if(int(battery) <= 25):
+			color = (0,0,255)
 		texts.append(["Battery: {}%".format(str(battery)),color])
 
-		color = (51,204,51)
-		if(temperature >= 90):
+		color = (255,119,0)
+		if(temperature >= 80):
 			color = (51,153,255)
 		texts.append(["Temperature: {} C".format(str(temperature)),color])
 
-		color = (51,204,51)
+		color = (255,119,0)
 		if(ToF >= 200):
 			color = (51,153,255)
 		texts.append(["ToF: {}".format(str(ToF)),color])
 
-		color = (51,204,51)
-		if(int(wifiSignal) <= 60):
-			color = (51,153,255)
-		texts.append(["Wifi-Signal: {} [Disable]".format(str(wifiSignal)),color])
+		# color = (255,119,0)
+		# if(int(wifiSignal) <= 60):
+		# 	color = (51,153,255)
+		# texts.append(["Wifi-Signal: {} [Disable]".format(str(wifiSignal)),color])
 
-		color = (51,204,51)
-		if(flightTime <= 120):
+		color = (255,119,0)
+		if(flightTime >= 120):
 			color = (51,153,255)
 		texts.append(["Flight Time: {}".format(str(flightTime)),color])
 		
-		
+		cv2.namedWindow("infoDrone")
+		height = 20
+		size = len(texts)
+		img = 200 * np.ones((size*height+5,200,3), np.uint8)
+		cv2.rectangle(img,(0,0),(200,size*height+5),(0,0,0),2)
 
-		height = 30
 		for line in texts:
-			cv2.putText(img, line[0] , (10,height), cv2.FONT_HERSHEY_DUPLEX,1,line[1], )
-			height += 30
+			cv2.putText(img, line[0] , (10,height), cv2.FONT_HERSHEY_PLAIN,1,line[1], 2)
+			cv2.line(img,(0,height+5),(200,height+5),(0,0,0),1)
+			height += 20
 		
 		cv2.imshow("infoDrone",img)
+		cv2.moveWindow('infoDrone',2000,370)
 
 	def off(self):
 		self.me.land()
