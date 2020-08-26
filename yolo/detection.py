@@ -51,6 +51,6 @@ class detection(): # obj_detected
 	def set_color(self,color):
 		self.color = color
 
-	def set_prediction(self,centroid):
+	def set_centroid(self,centroid):
 		self.centerX = centroid[0]
 		self.centerY = centroid[1]

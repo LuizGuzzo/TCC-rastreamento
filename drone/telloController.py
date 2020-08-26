@@ -36,12 +36,23 @@ class simpleTello():
 		self.frame = cv2.resize(myFrame, (self.width, self.height))
 		return self.frame
 
-	def setCommand(self,cmd):
+	def takeoffSearching(self,flag):
 		me = self.me
 
 		if self.takeoff == False:
 			me.takeoff()
 			self.takeoff = True
+		
+		me.left_right_velocity = 0; me.forward_backward_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0
+
+		if flag:
+			me.yaw_velocity = 10
+
+		if me.send_rc_control:
+			me.send_rc_control(me.left_right_velocity, me.forward_backward_velocity, me.up_down_velocity, me.yaw_velocity)
+
+	def setCommand(self,cmd):
+		me = self.me
 
 		self.droneInfo()
 		me.left_right_velocity = 0; me.forward_backward_velocity = 0;me.up_down_velocity = 0; me.yaw_velocity = 0

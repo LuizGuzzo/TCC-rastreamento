@@ -17,7 +17,7 @@ from centroidtracker import CentroidTracker
 
 
 def getMousePosition(event,x,y,flags,param):
-    global mouse,filterStarted
+    global mouse,targetAcquired
     if event == cv2.EVENT_LBUTTONDBLCLK:
         mouse = (x,y)
 	
@@ -42,7 +42,7 @@ def CNN_FP_info():
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--input", default = 2,	help="path to input video")
+ap.add_argument("-i", "--input", default = 1,	help="path to input video")
 ap.add_argument("-o", "--output", default = 'inout/test.avi',	help="path to output video")
 ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco-tiny',	help="base path to YOLO directory")
 ap.add_argument("-c", "--confidence", type=float, default=0.4,	help="minimum probability to filter weak detections")
@@ -73,7 +73,7 @@ except:
 
 writer = None
 mouse = None
-filterStarted = False
+targetAcquired = False
 
 global infos
 infos = {
@@ -83,6 +83,15 @@ infos = {
 	"Track": None,
 	"Class": None,
 }
+
+# global infos
+# infos = {
+# 	"System Status":["",(255,0,0)],
+# 	"FPS": ["0",(255,0,0)],
+# 	"Drone": ["None",(255,0,0)],
+# 	"Track": ["None",(255,0,0)],
+# 	"Class": ["None",(255,0,0)],
+# }
 
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
@@ -96,15 +105,20 @@ while True:
 	
 	framecpy = frame.copy()
 	start = time.time()
-	if filterStarted is False:
+
+	objects_array = yoloCNN.get_objects(frame)
+
+	if targetAcquired is False:
+
+		if FLIGHT:
+			sTello.takeoffSearching(True)
 		
 		mouse = None
 		alvo = None
 		centroid_predicted = None
 		cmd = None
-		ct = None
+		multiTracker = None
 		
-		objects_array = yoloCNN.get_objects(frame)
 		for obj in objects_array:
 			obj.draw(framecpy)
 
@@ -114,43 +128,42 @@ while True:
 		cv2.waitKey(1)
 
 		if mouse is not None:
-
-			centroid_predicted = mouse
 			
 			for obj in objects_array:
-				if obj.check_centroid(centroid_predicted) is True:
+				if obj.check_centroid(mouse) is True:
 					alvo = obj
 					break
 			
 			if alvo is None:
 				print("[ERROR] - chose again the object")
-				continue
 			else:
-				
-				ct = CentroidTracker(args["maxframelost"])
+			
+				if FLIGHT:
+					sTello.takeoffSearching(False)
+
+				multiTracker = CentroidTracker(args["maxframelost"])
 				infos["Class"] = alvo.category
 
 				objectsSameClass = []
 				for (i,obj) in enumerate(objects_array):
 					if obj.check_category(alvo.category):
 						objectsSameClass.append(obj)
-						if obj.check_centroid(centroid_predicted) is True:
+						if obj.check_centroid(mouse) is True:
 							alvo.id = i
 				
-				ct.update(objectsSameClass)
+				multiTracker.update(objectsSameClass)
 				
-				particleFilter = pf.ParticleFilter(args["particles"],centroid_predicted,
+				particleFilter = pf.ParticleFilter(args["particles"],mouse,
 									args["maxframelost"],args["deltat"],args["velmax"])
-				centroid_predicted = particleFilter.filter_steps(centroid_predicted)
+				centroid_predicted = particleFilter.filter_steps(mouse)
 
-				filterStarted = True
+				targetAcquired = True
 				cv2.destroyAllWindows()
 				imt.createMovRulesTrackers()
 
+	#else target acquired
 	else:
 
-		#CNN
-		objects_array = yoloCNN.get_objects(frame)
 		objectsSameClass = []
 		for obj in objects_array:
 			if (obj.check_category(alvo.category) is True):
@@ -158,12 +171,11 @@ while True:
 			else:
 				obj.draw(framecpy) # draw generic objects
 
-		#MultiTrack
-		objects_dic = ct.update(objectsSameClass)
+		objects_dic = multiTracker.update(objectsSameClass)
 
 		find = False
 		for i,obj in objects_dic.items():
-			if (ct.disappeared[i] == 0):
+			if (multiTracker.disappeared[i] == 0):
 				if (alvo.id == i):
 					alvo = obj
 					find = True
@@ -172,13 +184,13 @@ while True:
 			else:
 				(cx,cy) = obj.get_centroid()
 				text1 = "ID: {}".format(i)
-				text2 = "{}/{}".format(ct.disappeared[i],args["maxframelost"])
+				text2 = "{}/{}".format(multiTracker.disappeared[i],args["maxframelost"])
 				cv2.putText(framecpy, text1, (cx - 10, cy - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, obj.color, 2)
 				cv2.circle(framecpy, (cx, cy), 2, obj.color, -1)
 				cv2.putText(framecpy, text2, (cx + 10, cy + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, obj.color, 2)
 
 				if(alvo.id == i):
-					obj.set_prediction(centroid_predicted)
+					obj.set_centroid(centroid_predicted)
 		
 
 		if find is True:
@@ -202,7 +214,7 @@ while True:
 		# lose tracking (max exceeded)
 		if centroid_predicted is False:
 			print("[ERROR] - chose again the object")
-			filterStarted = False
+			targetAcquired = False
 			infos["Track"] = "Lost Tracking"
 			infos["Class"] = None
 			infos["Drone"] = None
@@ -214,6 +226,7 @@ while True:
 		if FLIGHT:
 			sTello.setCommand(cmd)
 
+	#end if - TargetAcquired
 
 	end = time.time()
 	elap = (end - start)
@@ -223,7 +236,6 @@ while True:
 
 	CNN_FP_info()
 
-	# print("FPS: {}".format(str(round(fps, 2))))
 	cv2.imshow("output",framecpy)
 
 	if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -247,3 +259,6 @@ while True:
 print("[INFO] cleaning up...")
 writer.release()
 cap.release()
+if FLIGHT: 
+	print("[INFO] - Drone is Landing")
+	sTello.off()
