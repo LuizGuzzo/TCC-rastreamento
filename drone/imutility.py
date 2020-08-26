@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
-import detection as det
+# import detection as det
+from drone import detection as det
 
 def stackImages(scale,imgArray):
 	rows = len(imgArray)
@@ -231,7 +232,7 @@ def createHsvTrackers():
 def createMovRulesTrackers():
 	cv2.namedWindow("Moviment Rules")
 	cv2.resizeWindow("Moviment Rules",640,240)
-	cv2.createTrackbar("Area Min","Moviment Rules",4500,1000000, empty)
-	cv2.createTrackbar("Area Max","Moviment Rules",7500,1000000, empty)
+	cv2.createTrackbar("Area Min","Moviment Rules",0,1000000, empty)
+	cv2.createTrackbar("Area Max","Moviment Rules",1000000,1000000, empty)
 	cv2.createTrackbar("xOffSet","Moviment Rules",70,1080, empty)
 	cv2.createTrackbar("yOffSet","Moviment Rules",70,1080, empty)

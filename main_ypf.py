@@ -9,25 +9,12 @@ import time
 import cv2
 import os
 
-from djitellopy import Tello
-import particle_filter.pf_tools as pf
-import yolo.yolOO as yoo
-import drone.telloHsvTrack.telloController as con
+import drone.imutility as imt
+from drone import telloController as tc
+from particle_filter import pf_tools as pf
+from yolo import yolOO as yoo
 from centroidtracker import CentroidTracker
 
-# construct the argument parse and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--input", default = 0,	help="path to input video")
-ap.add_argument("-o", "--output", default = 'inout/test.avi',	help="path to output video")
-ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco-tiny',	help="base path to YOLO directory")
-ap.add_argument("-c", "--confidence", type=float, default=0.4,	help="minimum probability to filter weak detections")
-ap.add_argument("-t", "--threshold", type=float, default=0.1,	help="threshold when applyong non-maxima suppression")
-ap.add_argument("-p","--particles", type=float, default=500, help="total of particles on the particle filter")
-ap.add_argument("-mf","--maxframelost",type=float, default=30, help="the max of frames can be lost")
-ap.add_argument("-dt","--deltat",type=float, default=0.015, help="")
-ap.add_argument("-vm","--velmax",type=float, default=4000, help="")
-
-args = vars(ap.parse_args())
 
 def getMousePosition(event,x,y,flags,param):
     global mouse,filterStarted
@@ -53,14 +40,32 @@ def CNN_FP_info():
 	cv2.imshow("CNN_FP_Info",img)
 
 
-cap = cv2.VideoCapture(args["input"])
+# construct the argument parse and parse the arguments
+ap = argparse.ArgumentParser()
+ap.add_argument("-i", "--input", default = 2,	help="path to input video")
+ap.add_argument("-o", "--output", default = 'inout/test.avi',	help="path to output video")
+ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco-tiny',	help="base path to YOLO directory")
+ap.add_argument("-c", "--confidence", type=float, default=0.4,	help="minimum probability to filter weak detections")
+ap.add_argument("-t", "--threshold", type=float, default=0.1,	help="threshold when applyong non-maxima suppression")
+ap.add_argument("-p","--particles", type=float, default=500, help="total of particles on the particle filter")
+ap.add_argument("-mf","--maxframelost",type=float, default=30, help="the max of frames can be lost")
+ap.add_argument("-dt","--deltat",type=float, default=0.015, help="")
+ap.add_argument("-vm","--velmax",type=float, default=4000, help="")
+ap.add_argument("-f","--flight",type=int, default=0, help="")
+
+args = vars(ap.parse_args())
+
+FLIGHT = False if args["flight"] == 0 else True
+if FLIGHT:
+	sTello = tc.simpleTello()
+else:
+	cap = cv2.VideoCapture(args["input"])
 
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
 		else cv2.CAP_PROP_FRAME_COUNT
 	total = int(cap.get(prop))
 	print("[INFO] {} total frames in video".format(total))
-
 except:
 	print("[INFO] could not determine # of frames in video")
 	print("[INFO] no approx. completion time can be provided")
@@ -79,37 +84,18 @@ infos = {
 	"Class": None,
 }
 
-# try:
-# 	me = Tello()
-# 	me.connect()
-# 	me.for_back_velocity = 0
-# 	me.left_right_velocity = 0
-# 	me.up_down_velocity = 0
-# 	me.yaw_velocity = 0
-# 	me.speed = 0
-# 	print(me.get_battery())
-
-# 	me.streamoff()
-# 	me.streamon()
-# 	telloAvaible = True
-# except:
-# 	telloAvaible = False
-	
-# print(telloAvaible)
-
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
 
 while True:
-	(grabbed, frame) = cap.read()
+	if FLIGHT:
+		frame = sTello.getFrame()
+	else:
+		(grabbed, frame) = cap.read()
+		if not grabbed:		break
+	
 	framecpy = frame.copy()
-
-
 	start = time.time()
-
-	if not grabbed:
-		break
-
 	if filterStarted is False:
 		
 		mouse = None
@@ -159,7 +145,7 @@ while True:
 
 				filterStarted = True
 				cv2.destroyAllWindows()
-				con.createMovRulesTrackers()
+				imt.createMovRulesTrackers()
 
 	else:
 
@@ -172,7 +158,6 @@ while True:
 			else:
 				obj.draw(framecpy) # draw generic objects
 
-			
 		#MultiTrack
 		objects_dic = ct.update(objectsSameClass)
 
@@ -198,7 +183,7 @@ while True:
 
 		if find is True:
 			centroid_predicted = particleFilter.filter_steps(alvo.get_centroid())
-			cmd = con.movimentRules(framecpy,alvo)
+			cmd,framecpy = imt.movimentRules(framecpy,alvo)
 
 			alvo.set_color((0,255,0))
 			alvo.draw(framecpy) # draw the target
@@ -210,7 +195,7 @@ while True:
 			alvo.centerX , alvo.centerY = (centroid_predicted[0],centroid_predicted[1])
 
 			centroid_predicted = particleFilter.filter_steps(None)
-			cmd = con.movimentRules(framecpy,None)
+			cmd,framecpy = imt.movimentRules(framecpy,None)
 			
 			infos["Track"] = "Predicting"
 
@@ -226,29 +211,9 @@ while True:
 		particleFilter.drawBox(framecpy)
 		infos["Drone"] = cmd
 
-		# #controller
+		if FLIGHT:
+			sTello.setCommand(cmd)
 
-		# if cmd == "Fwd":
-
-		# elif cmd == "Bwd":
-			
-		# elif cmd == "Lft":
-			
-		# elif cmd == "!cw":
-			
-		# elif cmd == "cw":
-
-		# elif cmd == "Rgt":
-
-		# elif cmd == "Up":
-
-		# elif cmd == "Dwn":
-
-		# else:
-
-
-			
-		
 
 	end = time.time()
 	elap = (end - start)

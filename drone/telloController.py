@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from djitellopy import Tello
-import imutility as imu
 import sys
 global cmdPrint
 
@@ -177,6 +176,7 @@ def main():
 if __name__ == '__main__':
 	import detection as det
 	import argparse
+	import imutility as imu
 
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-f", "--flight", default = '0')
@@ -190,8 +190,9 @@ if __name__ == '__main__':
 
 	main()
 else:
-	# import detection as det
-	import drone.telloHsvTrack.detection as det
+	from . import detection as det
+	# import drone.telloHsvTrack.detection as det
+
 	
 
 	
