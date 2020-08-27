@@ -232,7 +232,7 @@ def createHsvTrackers():
 def createMovRulesTrackers():
 	cv2.namedWindow("Moviment Rules")
 	cv2.resizeWindow("Moviment Rules",640,240)
-	cv2.createTrackbar("Area Min","Moviment Rules",0,1000000, empty)
-	cv2.createTrackbar("Area Max","Moviment Rules",1000000,1000000, empty)
+	cv2.createTrackbar("Area Min","Moviment Rules",0,100000, empty)
+	cv2.createTrackbar("Area Max","Moviment Rules",100000,100000, empty)
 	cv2.createTrackbar("xOffSet","Moviment Rules",70,1080, empty)
 	cv2.createTrackbar("yOffSet","Moviment Rules",70,1080, empty)

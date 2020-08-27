@@ -221,20 +221,15 @@ while True:
 
 	infoCnnFp = show_CNN_FP_info()
 	
-	#TODO: trocar a posição dos info para a direita, a fim de corrigir o bug do mouse não pegar o objeto selecionado
 	#concat info and output in one image
 	final_image = np.zeros((framecpy.shape[0],framecpy.shape[1]+infoCnnFp.shape[1],3),dtype=np.uint8)
 
 	final_image[0:framecpy.shape[0],0:framecpy.shape[1]] = framecpy
 	final_image[0:infoCnnFp.shape[0],framecpy.shape[1]:framecpy.shape[1]+infoCnnFp.shape[1]] = infoCnnFp
 
-	# final_image[0:infoCnnFp.shape[0],0:infoCnnFp.shape[1]] = infoCnnFp
-	# final_image[0:framecpy.shape[0],infoCnnFp.shape[1]:infoCnnFp.shape[1]+framecpy.shape[1]] = framecpy
-
 	if FLIGHT:
 		infoDrone = sTello.showDroneInfo()
 		final_image[infoCnnFp.shape[0]:infoCnnFp.shape[0]+infoDrone.shape[0],framecpy.shape[1]:framecpy.shape[1]+infoDrone.shape[1]] = infoDrone
-		# final_image[infoCnnFp.shape[0]:infoCnnFp.shape[0]+infoDrone.shape[0],0:infoDrone.shape[1]] = infoDrone
 
 
 	cv2.imshow("output",final_image)
@@ -245,7 +240,7 @@ while True:
 	if writer is None:
 
 		fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-		writer = cv2.VideoWriter(args["output"], fourcc, int(fps+1), (frame.shape[1], frame.shape[0]), True)
+		writer = cv2.VideoWriter(args["output"], fourcc, 6, (final_image.shape[1], final_image.shape[0]), True)
 
 		if total > 0:
 			elap = (end - start)
