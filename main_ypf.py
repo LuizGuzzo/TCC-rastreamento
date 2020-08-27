@@ -22,13 +22,10 @@ def getMousePosition(event,x,y,flags,param):
         mouse = (x,y)
 	
 def show_CNN_FP_info():
-	cv2.namedWindow("CNN_FP_Info")
 	y = 20
 	size = len(infos)
 	img = 200 * np.ones((size*y+5,200,3), np.uint8)
 	cv2.rectangle(img,(0,0),(200,size*y+5),(0,0,0),2)
-
-	# TODO: alterar as infos para carregarem [key: []]
 
 	for key,value in infos.items():
 		cv2.putText(img,
@@ -37,8 +34,7 @@ def show_CNN_FP_info():
 		cv2.line(img,(0,y+5),(200,y+5),(0,0,0),1)
 		y += 20
 
-	cv2.imshow("CNN_FP_Info",img)
-	cv2.moveWindow('CNN_FP_Info',2000,200)
+	return img
 
 
 # construct the argument parse and parse the arguments
@@ -60,7 +56,7 @@ FLIGHT = False if args["flight"] == 0 else True
 if FLIGHT:
 	sTello = tc.simpleTello()
 else:
-	cap = cv2.VideoCapture(args["input"])
+	cap = cv2.VideoCapture(int(args["input"]))
 
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
@@ -75,15 +71,6 @@ except:
 writer = None
 mouse = None
 targetAcquired = False
-
-# global infos
-# infos = {
-# 	"System Status":"",
-# 	"FPS": 0,
-# 	"Drone": None,
-# 	"Track": None,
-# 	"Class": None,
-# }
 
 global infos
 infos = {
@@ -162,8 +149,7 @@ while True:
 				cv2.destroyAllWindows()
 				imt.createMovRulesTrackers()
 
-	#else target acquired
-	else:
+	else: #TargetAcquired
 
 		objectsSameClass = []
 		for obj in objects_array:
@@ -235,11 +221,22 @@ while True:
 
 	infos["FPS"] = [str(fps),(255,119,0)]
 
-	show_CNN_FP_info()
-	if FLIGHT:	sTello.showDroneInfo()
+	images = []
 
-	cv2.imshow("output",framecpy)
-	cv2.moveWindow('output',2370,200)
+	infoCnnFp = show_CNN_FP_info()
+
+	#concat info and output in one image
+	final_image = np.zeros((framecpy.shape[0],framecpy.shape[1]+infoCnnFp.shape[1],3),dtype=np.uint8)
+
+	final_image[0:infoCnnFp.shape[0],0:infoCnnFp.shape[1]] = infoCnnFp
+	final_image[0:framecpy.shape[0],infoCnnFp.shape[1]:infoCnnFp.shape[1]+framecpy.shape[1]] = framecpy
+
+	if FLIGHT:
+		infoDrone = sTello.showDroneInfo()
+		final_image[0:infoDrone.shape[0],infoCnnFp.shape[1]+infoDrone.shape[1]:] = infoDrone
+
+
+	cv2.imshow("output",final_image)
 
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break

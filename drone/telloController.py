@@ -131,8 +131,7 @@ class simpleTello():
 			cv2.line(img,(0,height+5),(200,height+5),(0,0,0),1)
 			height += 20
 		
-		cv2.imshow("infoDrone",img)
-		cv2.moveWindow('infoDrone',2000,370)
+		return img
 
 	def off(self):
 		self.me.land()
