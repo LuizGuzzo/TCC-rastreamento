@@ -1,7 +1,3 @@
-# USAGE
-# python yolo_video.py --input videos/airport.mp4 --output output/airport_output.avi --yolo yolo-coco
-
-# import the necessary packages
 import numpy as np
 import argparse
 import imutils
@@ -224,16 +220,21 @@ while True:
 	images = []
 
 	infoCnnFp = show_CNN_FP_info()
-
+	
+	#TODO: trocar a posição dos info para a direita, a fim de corrigir o bug do mouse não pegar o objeto selecionado
 	#concat info and output in one image
 	final_image = np.zeros((framecpy.shape[0],framecpy.shape[1]+infoCnnFp.shape[1],3),dtype=np.uint8)
 
-	final_image[0:infoCnnFp.shape[0],0:infoCnnFp.shape[1]] = infoCnnFp
-	final_image[0:framecpy.shape[0],infoCnnFp.shape[1]:infoCnnFp.shape[1]+framecpy.shape[1]] = framecpy
+	final_image[0:framecpy.shape[0],0:framecpy.shape[1]] = framecpy
+	final_image[0:infoCnnFp.shape[0],framecpy.shape[1]:framecpy.shape[1]+infoCnnFp.shape[1]] = infoCnnFp
+
+	# final_image[0:infoCnnFp.shape[0],0:infoCnnFp.shape[1]] = infoCnnFp
+	# final_image[0:framecpy.shape[0],infoCnnFp.shape[1]:infoCnnFp.shape[1]+framecpy.shape[1]] = framecpy
 
 	if FLIGHT:
 		infoDrone = sTello.showDroneInfo()
-		final_image[0:infoDrone.shape[0],infoCnnFp.shape[1]+infoDrone.shape[1]:] = infoDrone
+		final_image[infoCnnFp.shape[0]:infoCnnFp.shape[0]+infoDrone.shape[0],framecpy.shape[1]:framecpy.shape[1]+infoDrone.shape[1]] = infoDrone
+		# final_image[infoCnnFp.shape[0]:infoCnnFp.shape[0]+infoDrone.shape[0],0:infoDrone.shape[1]] = infoDrone
 
 
 	cv2.imshow("output",final_image)
@@ -251,7 +252,7 @@ while True:
 			print("[INFO] single frame took {:.4f} seconds".format(elap))
 			print("[INFO] estimated total time to finish: {:.4f} | in minutes> {:.2f}".format(elap * total, (elap * total)/60))
 	
-	writer.write(framecpy)
+	writer.write(final_image)
 
 	
 

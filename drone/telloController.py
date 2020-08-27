@@ -120,7 +120,6 @@ class simpleTello():
 			color = (51,153,255)
 		texts.append(["Flight Time: {}".format(str(flightTime)),color])
 		
-		cv2.namedWindow("infoDrone")
 		height = 20
 		size = len(texts)
 		img = 200 * np.ones((size*height+5,200,3), np.uint8)
