@@ -96,7 +96,7 @@ class ParticleFilter():
         self.__vet_particles = sorted_vet_particulas
         return sorted_vet_particulas
 
-
+    
     def drawBox(self,frame):
         # frame = cv2.copyMakeBorder(frame,50,50,50,50,cv2.BORDER_CONSTANT,value= (255,255,255))
         roxo = (153,51,153)
@@ -106,7 +106,17 @@ class ParticleFilter():
         sumY = 0
 
         for particle in self.vet_particles_predicted:
-            frame = cv2.circle(frame, (int(particle.X), int(particle.Y)),2, (242,147,244), -1) #desenha as particulas
+            frame = cv2.circle(frame, (int(particle.X), int(particle.Y)),2, (242,147,244), 1) #desenha as particulas
+            # calculating the direction of particle and drawing it
+            a = particle.Vx
+            b = particle.Vy
+            c = math.sqrt(math.pow(a,2)+math.pow(b,2))
+            beta = math.asin(b/c)
+            x = 3 * math.cos(beta)
+            y = 3 * math.sin(beta)
+
+            frame = cv2.line(frame, (int(particle.X), int(particle.Y)),
+                    (int(particle.X+x), int(particle.Y+y)), (0,0,255),1 )
             sumX = sumX + particle.X
             sumY = sumY + particle.Y
 
