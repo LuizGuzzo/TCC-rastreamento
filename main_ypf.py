@@ -241,6 +241,7 @@ while True:
 
 		fourcc = cv2.VideoWriter_fourcc(*"MJPG")
 		writer = cv2.VideoWriter(args["output"], fourcc, 6, (final_image.shape[1], final_image.shape[0]), True)
+		writer_raw = cv2.VideoWriter("inout/raw.avi", fourcc, 6, (frame.shape[1], frame.shape[0]), True)
 
 		if total > 0:
 			elap = (end - start)
@@ -248,12 +249,13 @@ while True:
 			print("[INFO] estimated total time to finish: {:.4f} | in minutes> {:.2f}".format(elap * total, (elap * total)/60))
 	
 	writer.write(final_image)
-
+	writer_raw.write(frame)
 	
 
 # release the file pointers
 print("[INFO] cleaning up...")
 writer.release()
+writer_raw.release()
 if FLIGHT: 
 	print("[INFO] - Drone is Landing")
 	sTello.off()
