@@ -38,7 +38,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", default = 2,	help="path to input video")
 ap.add_argument("-o", "--output", default = 'inout/test.avi',	help="path to output video")
 ap.add_argument("-y", "--yolo", default = 'yolo/yolo-coco-tiny',	help="base path to YOLO directory")
-ap.add_argument("-c", "--confidence", type=float, default=0.4,	help="minimum probability to filter weak detections")
+ap.add_argument("-c", "--confidence", type=float, default=0.5,	help="minimum probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.1,	help="threshold when applyong non-maxima suppression")
 ap.add_argument("-p","--particles", type=float, default=500, help="total of particles on the particle filter")
 ap.add_argument("-mf","--maxframelost",type=float, default=30, help="the max of frames can be lost")
@@ -108,7 +108,7 @@ while True:
 
 		cv2.namedWindow('output')
 		cv2.setMouseCallback('output',getMousePosition)
-		cv2.putText(framecpy, "CHOSE THE OBJECT", (10, 400), cv2.FONT_HERSHEY_PLAIN, 4, (255, 255, 255), 3)
+		cv2.putText(framecpy, "CHOOSE THE OBJECT", (50, 400), cv2.FONT_HERSHEY_PLAIN, 3, (255, 255, 255), 3)
 		cv2.waitKey(1)
 
 		if mouse is not None:
@@ -134,6 +134,9 @@ while True:
 						objectsSameClass.append(obj)
 						if obj.check_centroid(mouse) is True:
 							alvo.id = i
+							cv2.destroyAllWindows()
+							imt.createMovRulesTrackers(obj.area)
+							
 				
 				multiTracker.update(objectsSameClass)
 				
@@ -142,8 +145,7 @@ while True:
 				centroid_predicted = particleFilter.filter_steps(mouse)
 
 				targetAcquired = True
-				cv2.destroyAllWindows()
-				imt.createMovRulesTrackers()
+				
 
 	else: #TargetAcquired
 
