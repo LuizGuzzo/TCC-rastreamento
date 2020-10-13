@@ -47,52 +47,30 @@ class ParticleFilter():
         for particle in self.__vet_particles:
             particle = particle.normaliza(sumvet)
 
-
+    def __getParticle_byWeight(self,ref):
+        # roda no vet de particulas e quando o peso passa do adquirido atribui essa particula ao resultado
+        acumulator = 0
+        for i,particle in enumerate(self.__vet_particles,0):
+            acumulator += particle.weight
+            if acumulator >= ref:
+                return particle
+    
     def __resort(self):
-        # sorted_vet_particulas = self.__vet_particles.copy() 
         sorted_vet_particulas = [p.particle() for _ in range(self.MAXPARTICLES)]
-        vet_weight = []
-        
-        sumWeight = 0
-        for particle in self.__vet_particles:
-            sumWeight = sumWeight + particle.weight
-            vet_weight.append(sumWeight)
+                
+        frag = 1/self.MAXPARTICLES
+        reference = random.uniform(0,1)
+        print(reference)
+        for i in range(self.MAXPARTICLES):
 
-        n = random.uniform(0,1)
-        metodo = False # ir true metodo correto, else metodo q ele deixou
-
-        if metodo:
-            print('n vai roda')
-            # # verificar aonde esse valor de N se encontra no intervalo de tempo do vet_weight
-            # # pegar esta posição e usar para buscar a particula na posição no vet_particles
-            # # atribuir essa particula "grande" selecionada ao novo vet_particula ate fechar 1 do total de peso analisado
+            if reference > 1:
+                reference -= 1
             
-            # tot = 0
-            # for _ in range(len(vet_particles)):
-            #     for i,sz in enumerate(vet_weight,0):
-            #         if n <= sz:
-            #             sorted_vet_particulas.append(vet_particles[i]) # pega a particula 'gorda'
-            #             frag = 1 / len(vet_particles)
-            #             tot = tot + frag
-            #             n = n + frag
-            #             # print("frag: {}|tot: {}|n: {}|".format(frag,tot,n))
-            #             if n > 1: #se ele extrapolar o 1, n deveria ser adicionado ao N embaixo?
-            #                 #perguntar pro professor
-            #                 n = 0
-            #             break
-            
-            # print("tot",tot)
-        else:
-            for z in range(self.MAXPARTICLES):
-                for i,sz in enumerate(vet_weight,0):
-                    if n <= sz:
-                        # print("casa: {}|sz: {}| n: {}|".format(i, sz, n))
-                        sorted_vet_particulas[z].setAll(self.__vet_particles[i])
+            new_particle = self.__getParticle_byWeight( reference )
+            sorted_vet_particulas[i].setAll(new_particle) # pega a particula 'gorda'
 
-                        # print("peso P: ",vet_particles[i].W)
-                        n = random.uniform(0,1)
-                        break
-        
+            reference += frag
+
         self.__vet_particles = sorted_vet_particulas
         return sorted_vet_particulas
 
