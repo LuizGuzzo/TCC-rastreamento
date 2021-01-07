@@ -4,9 +4,6 @@ from collections import OrderedDict
 import numpy as np
 from yolo.detection import detection
 
-# def main():
-# 	det = [detection(0,1,2,3,4,(25,25,25),"test",0.1),detection(0,1,2,3,4,(25,25,25),"test",0.1)]
-# 	update(det)
 
 class CentroidTracker():
 	def __init__(self, maxDisappeared=50):
@@ -26,6 +23,11 @@ class CentroidTracker():
 		del self.objects[objectID]
 		del self.disappeared[objectID]
 	
+	def getList(self):
+		# for detection in self.objects.values():
+		# 	print("x:{} y:{} w:{} h:{}".format(detection.x,detection.y,detection.x+detection.w,detection.y+detection.h))
+		return self.objects.copy()
+
 	def update(self, objects_array):
 
 		if len(objects_array) == 0:
@@ -138,3 +140,4 @@ class CentroidTracker():
 
 		# return the set of trackable objects
 		return self.objects
+	

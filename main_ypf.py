@@ -32,6 +32,26 @@ def show_CNN_FP_info():
 
 	return img
 
+def bb_intersection_over_union(boxA, boxB):
+		# determine the (x, y)-coordinates of the intersection rectangle
+	xA = max(boxA[0], boxB[0])
+	yA = max(boxA[1], boxB[1])
+	xB = min(boxA[2], boxB[2])
+	yB = min(boxA[3], boxB[3])
+	# compute the area of intersection rectangle
+	interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+	
+	# compute the area of both the prediction and ground-truth
+	# rectangles
+	boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+	boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+	# compute the intersection over union by taking the intersection
+	# area and dividing it by the sum of prediction + ground-truth
+	# areas - the interesection area
+	iou = interArea / float(boxAArea + boxBArea - interArea)
+	# return the intersection over union value
+	return iou*100
+
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -52,7 +72,8 @@ FLIGHT = False if args["flight"] == 0 else True
 if FLIGHT:
 	sTello = tc.simpleTello()
 else:
-	cap = cv2.VideoCapture(int(args["input"]))
+	# cap = cv2.VideoCapture(int(args["input"]))
+	cap = cv2.VideoCapture("inout/raw Lens.avi")
 
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
@@ -79,6 +100,10 @@ infos = {
 
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
+
+VP = 0 #Verdadeiro Positivo
+FP = 0 #Falso Positivo
+VN = 0 #Verdadeiro Negativo
 
 while True:
 	if FLIGHT:
@@ -156,25 +181,45 @@ while True:
 			else:
 				obj.draw(framecpy) # draw generic objects
 
-		objects_dic = multiTracker.update(objectsSameClass)
+		oldObjects_dic = multiTracker.getList()
+		multiTracker.update(objectsSameClass)
+		objects_dic = multiTracker.getList()
 
 		find = False
-		for i,obj in objects_dic.items():
-			if (multiTracker.disappeared[i] == 0):
-				if (alvo.id == i):
+		for id,obj in objects_dic.items():
+			if (multiTracker.disappeared[id] == 0):
+				
+				if id in oldObjects_dic.keys():
+					#calculate IoU for each box
+					inputBox = [objects_dic[id].x , objects_dic[id].y , objects_dic[id].x + objects_dic[id].w, objects_dic[id].y + objects_dic[id].h]
+					oldBox = [oldObjects_dic[id].x , oldObjects_dic[id].y , oldObjects_dic[id].x + oldObjects_dic[id].w, oldObjects_dic[id].y + oldObjects_dic[id].h]
+
+					cv2.rectangle(framecpy, (oldBox[0], oldBox[1]), (oldBox[2],oldBox[3]), (255, 0, 0), 1)
+					iou = bb_intersection_over_union(inputBox,oldBox)
+					text = "IoU:{:.0f}%".format(iou)
+					cv2.putText(framecpy, text, (inputBox[0] + 5, inputBox[1] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 2)
+
+					if iou > 70:
+						VP = VP + 1
+					else:
+						FP = FP + 1
+
+
+				if (alvo.id == id):
 					alvo = obj
 					find = True
 				else:
 					obj.draw(framecpy) # draw objects with same class
 			else:
+				VN += 1
 				(cx,cy) = obj.get_centroid()
-				text1 = "ID: {}".format(i)
-				text2 = "{}/{}".format(multiTracker.disappeared[i],args["maxframelost"])
+				text1 = "ID: {}".format(id)
+				text2 = "{}/{}".format(multiTracker.disappeared[id],args["maxframelost"])
 				cv2.putText(framecpy, text1, (cx - 10, cy - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, obj.color, 2)
 				cv2.circle(framecpy, (cx, cy), 2, obj.color, -1)
 				cv2.putText(framecpy, text2, (cx + 10, cy + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, obj.color, 2)
 
-				if(alvo.id == i):
+				if(alvo.id == id):
 					obj.set_centroid(centroid_predicted)
 		
 
@@ -219,8 +264,6 @@ while True:
 
 	infos["FPS"] = [str(fps),(255,119,0)]
 
-	images = []
-
 	infoCnnFp = show_CNN_FP_info()
 	
 	#concat info and output in one image
@@ -252,7 +295,12 @@ while True:
 	
 	writer.write(final_image)
 	writer_raw.write(frame)
-	
+
+print("VP: {} FP: {} VN: {}".format(VP,FP,VN))
+total = VP+FP+VN
+acuracia = (VP+VN)/total
+precisao = VP/(VP+FP)
+print("acuracia:{:.2f}% precisao: {:.2f}%".format(acuracia*100,precisao*100))
 
 # release the file pointers
 print("[INFO] cleaning up...")
