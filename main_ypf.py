@@ -11,7 +11,6 @@ from particle_filter import pf_tools as pf
 from yolo import yolOO as yoo
 from centroidtracker import CentroidTracker
 
-
 def getMousePosition(event,x,y,flags,param):
     global mouse,targetAcquired
     if event == cv2.EVENT_LBUTTONDBLCLK:
@@ -65,6 +64,7 @@ ap.add_argument("-mf","--maxframelost",type=float, default=30, help="the max of 
 ap.add_argument("-dt","--deltat",type=float, default=0.015, help="")
 ap.add_argument("-vm","--velmax",type=float, default=4000, help="")
 ap.add_argument("-f","--flight",type=int, default=0, help="")
+ap.add_argument("-iou","--iou",type=int, default=50, help="")
 
 args = vars(ap.parse_args())
 
@@ -73,7 +73,7 @@ if FLIGHT:
 	sTello = tc.simpleTello()
 else:
 	# cap = cv2.VideoCapture(int(args["input"]))
-	cap = cv2.VideoCapture("inout/raw Lens.avi")
+	cap = cv2.VideoCapture("inout/trims/trim_5.avi")
 
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
@@ -101,9 +101,12 @@ infos = {
 
 yoloCNN = yoo.yoloCNN(args["yolo"], args["confidence"], args["threshold"])
 
-VP = 0 #Verdadeiro Positivo
-FP = 0 #Falso Positivo
-VN = 0 #Verdadeiro Negativo
+VP = 0 #Verdadeiro Positivo, quando Iou >= 50
+FP = 0 #Falso Positivo, quando Iou < 50
+FN = 0 #Falso Negativo, quando Yolo falha
+VN = 0 #Verdadeiro Negativo, nao aplicado
+falhas = -1
+trimCount = 0
 
 while True:
 	if FLIGHT:
@@ -170,7 +173,8 @@ while True:
 				centroid_predicted = particleFilter.filter_steps(mouse)
 
 				targetAcquired = True
-				
+				falhas +=1
+
 
 	else: #TargetAcquired
 
@@ -189,29 +193,14 @@ while True:
 		for id,obj in objects_dic.items():
 			if (multiTracker.disappeared[id] == 0):
 				
-				if id in oldObjects_dic.keys():
-					#calculate IoU for each box
-					inputBox = [objects_dic[id].x , objects_dic[id].y , objects_dic[id].x + objects_dic[id].w, objects_dic[id].y + objects_dic[id].h]
-					oldBox = [oldObjects_dic[id].x , oldObjects_dic[id].y , oldObjects_dic[id].x + oldObjects_dic[id].w, oldObjects_dic[id].y + oldObjects_dic[id].h]
-
-					cv2.rectangle(framecpy, (oldBox[0], oldBox[1]), (oldBox[2],oldBox[3]), (255, 0, 0), 1)
-					iou = bb_intersection_over_union(inputBox,oldBox)
-					text = "IoU:{:.0f}%".format(iou)
-					cv2.putText(framecpy, text, (inputBox[0] + 5, inputBox[1] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 2)
-
-					if iou > 70:
-						VP = VP + 1
-					else:
-						FP = FP + 1
-
-
 				if (alvo.id == id):
 					alvo = obj
 					find = True
+
 				else:
 					obj.draw(framecpy) # draw objects with same class
 			else:
-				VN += 1
+				
 				(cx,cy) = obj.get_centroid()
 				text1 = "ID: {}".format(id)
 				text2 = "{}/{}".format(multiTracker.disappeared[id],args["maxframelost"])
@@ -222,8 +211,10 @@ while True:
 				if(alvo.id == id):
 					obj.set_centroid(centroid_predicted)
 		
+		oldSTD = particleFilter.calcDesvioPadrao()
 
 		if find is True:
+
 			centroid_predicted = particleFilter.filter_steps(alvo.get_centroid())
 			cmd,framecpy = imt.movimentRules(framecpy,alvo)
 
@@ -231,8 +222,33 @@ while True:
 			alvo.draw(framecpy) # draw the target
 			infos["Track"] = ["Tracking",(0,255,0)]
 
+			if alvo.id in oldObjects_dic.keys() and alvo.id in objects_dic.keys():
+				#calculate IoU for the target
+				inputBox = [objects_dic[alvo.id].x , objects_dic[alvo.id].y , objects_dic[alvo.id].x + objects_dic[alvo.id].w, objects_dic[alvo.id].y + objects_dic[alvo.id].h]
+				oldBoxOverFilterParticles = [centroid_predicted[0] - int(oldObjects_dic[alvo.id].w / 2) , centroid_predicted[1] - int(oldObjects_dic[alvo.id].h / 2),
+					centroid_predicted[0] + int(oldObjects_dic[alvo.id].w / 2), centroid_predicted[1] + int(oldObjects_dic[alvo.id].h / 2)]
+
+				cv2.rectangle(framecpy, 
+					(oldBoxOverFilterParticles[0],oldBoxOverFilterParticles[1]),
+					(oldBoxOverFilterParticles[2],oldBoxOverFilterParticles[3]),
+					(255, 0, 0), 1)
+				
+				iou = bb_intersection_over_union(inputBox,oldBoxOverFilterParticles)
+				text = "IoU:{:.0f}%".format(iou)
+				cv2.putText(framecpy, text, (inputBox[0] + 5, inputBox[1] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 2)
+
+				if iou > args["iou"]:
+					VP = VP + 1
+				else:
+					FP = FP + 1
+				
+				####################
+
+			
+
 		# lose tracking (non max exceeded)
-		if find is False: 
+		if find is False:
+			FN += 1 # alvo nao identificado
 			alvo.area = None # avoid unwanted approach
 			alvo.centerX , alvo.centerY = (centroid_predicted[0],centroid_predicted[1])
 
@@ -248,8 +264,13 @@ while True:
 			infos["Track"] = ["Lost Tracking",(0,0,255)]
 			infos["Class"] = ["None",(0,0,255)]
 			infos["Drone"] = ["None",(255,119,0)]
+
 			continue
 		
+		newSTD = particleFilter.calcDesvioPadrao()
+		expansion = newSTD/oldSTD
+		# print("oldSTD: {:.2f} | newSTD: {:.2f} | expansion: {:.2f}".format(oldSTD,newSTD,expansion))
+
 		particleFilter.drawBox(framecpy)
 		infos["Drone"] = [cmd,(255,119,0)]
 
@@ -279,14 +300,23 @@ while True:
 
 	cv2.imshow("output",final_image)
 
+	if cv2.waitKey(1) & 0xFF == ord('c'):
+		#preciso cortar esse video e n acho um bom editor, logo vou fazer o meu..
+		writer_trim.release()
+		trimCount+=1
+		writer_trim = cv2.VideoWriter("inout/trim_{}.avi".format(trimCount), fourcc, 6, (frame.shape[1], frame.shape[0]), True)
+
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
+	
 
 	if writer is None:
 
 		fourcc = cv2.VideoWriter_fourcc(*"MJPG")
 		writer = cv2.VideoWriter(args["output"], fourcc, 6, (final_image.shape[1], final_image.shape[0]), True)
 		writer_raw = cv2.VideoWriter("inout/raw.avi", fourcc, 6, (frame.shape[1], frame.shape[0]), True)
+		writer_trim = cv2.VideoWriter("inout/trim_{}.avi".format(trimCount), fourcc, 6, (frame.shape[1], frame.shape[0]), True)
+		
 
 		if total > 0:
 			elap = (end - start)
@@ -295,17 +325,23 @@ while True:
 	
 	writer.write(final_image)
 	writer_raw.write(frame)
+	writer_trim.write(frame)
 
-print("VP: {} FP: {} VN: {}".format(VP,FP,VN))
-total = VP+FP+VN
-acuracia = (VP+VN)/total
-precisao = VP/(VP+FP)
-print("acuracia:{:.2f}% precisao: {:.2f}%".format(acuracia*100,precisao*100))
+
+
+if total > 0:
+	rev = VP/(VP+FN)
+	precisao = VP/(VP+FP)
+	acc = (VP+VN)/(VP+VN+FP+FN)
+print("VP: {} FP: {} FN: {}".format(VP,FP,FN))
+print("rev:{:.2f}% | precisao: {:.2f}% | acuracia: {:.2f}".format(rev*100,precisao*100,acc*100))
+print("Falhou:",falhas)
 
 # release the file pointers
 print("[INFO] cleaning up...")
 writer.release()
 writer_raw.release()
+writer_trim.release()
 if FLIGHT: 
 	print("[INFO] - Drone is Landing")
 	sTello.off()

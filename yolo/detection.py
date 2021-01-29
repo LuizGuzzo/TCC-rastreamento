@@ -20,7 +20,7 @@ class detection(): # obj_detected
 
 		# draw a bounding box rectangle and label on the image
 		cv2.rectangle(image, (self.x, self.y), (self.x + self.w, self.y + self.h), self.color, 2)
-		text = "i:{} | {}: {:.4f}".format(self.id,self.category, self.confidence)
+		text = "id:{} | {}: {:.2f}%".format(self.id,self.category, self.confidence*100)
 		cv2.putText(image, text, (self.x, self.y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.color, 2)
 		
 		# draw in the center of the box and label the coordinates below the box

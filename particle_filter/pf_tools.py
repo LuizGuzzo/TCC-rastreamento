@@ -8,7 +8,8 @@ import numpy as np
 # import particle as p
 import particle_filter.particle as p # para rodar pela main ypf
 
-# MAXPARTICLES = 500
+from pointpats.centrography import std_distance
+
 
 
 class ParticleFilter():
@@ -60,7 +61,7 @@ class ParticleFilter():
                 
         frag = 1/self.MAXPARTICLES
         reference = random.uniform(0,1)
-        print(reference)
+        # print(reference)
         for i in range(self.MAXPARTICLES):
 
             if reference > 1:
@@ -77,7 +78,7 @@ class ParticleFilter():
     
     def drawBox(self,frame):
         # frame = cv2.copyMakeBorder(frame,50,50,50,50,cv2.BORDER_CONSTANT,value= (255,255,255))
-        roxo = (153,51,153)
+        cor = (255,0,255)
         
 
         sumX = 0
@@ -101,11 +102,13 @@ class ParticleFilter():
         avgX = int(sumX / self.MAXPARTICLES)
         avgY = int(sumY / self.MAXPARTICLES)
 
-        cv2.circle(frame,(int(avgX),int(avgY)),100,roxo,2)
-        cv2.circle(frame,(int(avgX),int(avgY)),2,roxo,-1)
+        raio = int(self.calcDesvioPadrao())
+        cv2.circle(frame,(int(avgX),int(avgY)),raio,cor,2)
+        cv2.circle(frame,(int(avgX),int(avgY)),2,cor,-1)
+        cv2.circle(frame,(int(avgX),int(avgY)),1,(0,255,255),-1)
         
-        text = "avgX: {} | avgY: {}".format(avgX, avgY)
-        cv2.putText(frame,text,(avgX+100,avgY+100),cv2.FONT_HERSHEY_SIMPLEX,0.5, roxo,2)
+        text = "cX:{} | cY:{} | SD:{}".format(avgX,avgY,raio)
+        cv2.putText(frame,text,(avgX+raio,avgY+raio),cv2.FONT_HERSHEY_SIMPLEX,0.5, cor,2)
             
         return frame
 
@@ -131,7 +134,7 @@ class ParticleFilter():
         self.vet_particles_predicted = self.__prediction()
 
         if center is not None:
-            print("[INFO] - < tracking >")
+            # print("[INFO] - < tracking >")
             self.__correction(center)
             self.__normalize()
             self.__resort()
@@ -148,3 +151,10 @@ class ParticleFilter():
 
         # return self.vet_particles_predicted
         return self.__centroid_predicted()
+
+    def calcDesvioPadrao(self):
+        ordinaryParticles = []
+        for particles in self.vet_particles_predicted:
+            ordinaryParticles.append([particles.X,particles.Y])
+        
+        return std_distance(ordinaryParticles)
